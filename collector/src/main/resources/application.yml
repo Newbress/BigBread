@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: daeppang-collector
+  main:
+    web-application-type: none
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/daeppang}
+    username: ${DB_USERNAME:daeppang}
+    password: ${DB_PASSWORD:daeppang}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    # 스키마 마이그레이션은 api 모듈이 담당한다 (동시 실행 경합 방지)
+    enabled: false

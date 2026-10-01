@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: daeppang-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-daeppang}
+      POSTGRES_USER: ${DB_USERNAME:-daeppang}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-daeppang}
+    ports:
+      - "5432:5432"
+    volumes:
+      - daeppang-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-daeppang} -d ${DB_NAME:-daeppang}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  daeppang-db:
