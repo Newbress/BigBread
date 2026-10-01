@@ -1,20 +1,20 @@
 services:
   db:
     image: postgis/postgis:16-3.4
-    container_name: daeppang-db
+    container_name: bigbread-db
     environment:
-      POSTGRES_DB: ${DB_NAME:-daeppang}
-      POSTGRES_USER: ${DB_USERNAME:-daeppang}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-daeppang}
+      POSTGRES_DB: ${DB_NAME:-bigbread}
+      POSTGRES_USER: ${DB_USERNAME:-bigbread}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-bigbread}
     ports:
       - "5432:5432"
     volumes:
-      - daeppang-db:/var/lib/postgresql/data
+      - bigbread-db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-daeppang} -d ${DB_NAME:-daeppang}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-bigbread} -d ${DB_NAME:-bigbread}"]
       interval: 5s
       timeout: 3s
       retries: 10
 
 volumes:
-  daeppang-db:
+  bigbread-db:

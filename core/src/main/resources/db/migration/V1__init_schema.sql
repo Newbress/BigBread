@@ -1,4 +1,4 @@
--- 대빵(DaePpang) 초기 스키마
+-- 대빵(BigBread) 초기 스키마
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- 대전 5개 구

@@ -1,3 +1,3 @@
-rootProject.name = "daeppang"
+rootProject.name = "bigbread"
 
 include("core", "api", "collector")

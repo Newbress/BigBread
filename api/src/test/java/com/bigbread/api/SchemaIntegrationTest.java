@@ -1,10 +1,10 @@
-package com.daeppang.api;
+package com.bigbread.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.daeppang.core.Bakery;
-import com.daeppang.core.BakeryRepository;
-import com.daeppang.core.DistrictRepository;
+import com.bigbread.core.Bakery;
+import com.bigbread.core.BakeryRepository;
+import com.bigbread.core.DistrictRepository;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;

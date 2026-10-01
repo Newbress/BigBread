@@ -1,12 +1,12 @@
 spring:
   application:
-    name: daeppang-collector
+    name: bigbread-collector
   main:
     web-application-type: none
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/daeppang}
-    username: ${DB_USERNAME:daeppang}
-    password: ${DB_PASSWORD:daeppang}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/bigbread}
+    username: ${DB_USERNAME:bigbread}
+    password: ${DB_PASSWORD:bigbread}
   jpa:
     open-in-view: false
     hibernate:

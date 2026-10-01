@@ -1,4 +1,4 @@
-package com.daeppang.core;
+package com.bigbread.core;
 
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.Configuration;

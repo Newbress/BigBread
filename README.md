@@ -1,4 +1,4 @@
-# 대빵 (DaePpang) 🥖
+# 대빵 (BigBread) 🥖
 
 대전 5개 구(동구·중구·서구·유성구·대덕구)의 유명 빵집을 지도에 표시하고, 대표 빵·원본 리뷰 링크·도보 동선을 제공하는 웹 서비스.
 
@@ -26,7 +26,7 @@ cd frontend && npm install && npm run dev
 
 ## 테스트
 
-`api` 통합 테스트는 실제 PostGIS DB가 필요하다. 기본값은 `localhost:5432/daeppang`이며
+`api` 통합 테스트는 실제 PostGIS DB가 필요하다. 기본값은 `localhost:5432/bigbread`이며
 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`로 변경할 수 있다.
 
 ```bash

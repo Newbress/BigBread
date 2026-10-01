@@ -1,6 +1,6 @@
-package com.daeppang.api;
+package com.bigbread.api;
 
-import com.daeppang.core.DistrictRepository;
+import com.bigbread.core.DistrictRepository;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

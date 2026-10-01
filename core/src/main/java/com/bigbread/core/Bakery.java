@@ -1,4 +1,4 @@
-package com.daeppang.core;
+package com.bigbread.core;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

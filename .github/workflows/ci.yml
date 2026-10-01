@@ -12,13 +12,13 @@ jobs:
       db:
         image: postgis/postgis:16-3.4
         env:
-          POSTGRES_DB: daeppang
-          POSTGRES_USER: daeppang
-          POSTGRES_PASSWORD: daeppang
+          POSTGRES_DB: bigbread
+          POSTGRES_USER: bigbread
+          POSTGRES_PASSWORD: bigbread
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U daeppang"
+          --health-cmd "pg_isready -U bigbread"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10

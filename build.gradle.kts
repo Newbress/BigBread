@@ -7,7 +7,7 @@ plugins {
 subprojects {
     apply(plugin = "java")
 
-    group = "com.daeppang"
+    group = "com.bigbread"
     version = "0.0.1-SNAPSHOT"
 
     extensions.configure<JavaPluginExtension> {

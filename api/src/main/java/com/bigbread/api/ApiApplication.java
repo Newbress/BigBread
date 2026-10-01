@@ -1,6 +1,6 @@
-package com.daeppang.api;
+package com.bigbread.api;
 
-import com.daeppang.core.CoreConfig;
+import com.bigbread.core.CoreConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
