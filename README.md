@@ -30,6 +30,9 @@ docker compose up -d db       # PostgreSQL + PostGIS
 cd frontend && npm install && npm run dev
 ```
 
+> **포트 충돌**: PC에 PostgreSQL이 이미 설치돼 5432를 쓰고 있으면 `localhost:5432` 접속이 컨테이너가 아니라 그 DB로 가서
+> `password authentication failed`가 난다. `.env`에 `DB_PORT=5433`을 넣고 `docker compose up -d db`로 다시 띄우면 된다.
+
 ## 테스트
 
 `api` 통합 테스트는 실제 PostGIS DB가 필요하다. 기본값은 `localhost:5432/bigbread`이며

@@ -7,7 +7,7 @@ spring:
   application:
     name: bigbread-api
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/bigbread}
+    url: ${DB_URL:jdbc:postgresql://localhost:${DB_PORT:5432}/${DB_NAME:bigbread}}
     username: ${DB_USERNAME:bigbread}
     password: ${DB_PASSWORD:bigbread}
   jpa:
