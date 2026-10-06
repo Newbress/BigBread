@@ -1,4 +1,9 @@
 spring:
+  config:
+    # 레포 루트의 .env를 읽는다 (bootRun의 작업 디렉터리는 모듈 폴더라서 ../ 도 함께 시도)
+    import:
+      - optional:file:./.env[.properties]
+      - optional:file:../.env[.properties]
   application:
     name: bigbread-api
   datasource:
