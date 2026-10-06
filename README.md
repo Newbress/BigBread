@@ -15,6 +15,12 @@
 
 Java 21 · Spring Boot 4.1 · Gradle · PostgreSQL 16 + PostGIS · Flyway · React 19 · Kakao Maps
 
+## 사전 준비
+
+- Docker Desktop (PostGIS 컨테이너용)
+- Node.js 22+
+- JDK 21은 없어도 된다: 첫 `./gradlew` 실행 때 Gradle이 자동으로 내려받는다(인터넷 필요). 직접 설치하려면 Windows에서 `winget install EclipseAdoptium.Temurin.21.JDK`
+
 ## 실행
 
 ```bash
