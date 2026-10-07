@@ -1,0 +1,5 @@
+# 개발용 프로필: 샘플 데이터(db/seed)를 함께 마이그레이션한다.
+# 실행: ./gradlew :api:bootRun --args="--spring.profiles.active=dev"
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed
