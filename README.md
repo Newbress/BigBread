@@ -44,5 +44,12 @@ cd frontend && npm install && npm run dev
 
 ## 브랜치 / 커밋 규칙
 
-- 브랜치: `feat/…`, `fix/…`, `chore/…`, `docs/…` (예: `feat/bakery-api`)
+| 브랜치 | 용도 |
+|---|---|
+| `main` | 운영(배포) 브랜치. `dev`에서 검증된 변경만 PR로 반영 |
+| `dev` | 개발 통합 브랜치. 모든 작업 브랜치는 여기로 PR |
+| `feat/…`, `fix/…`, `chore/…`, `docs/…` | 작업 브랜치. `dev`에서 분기 (예: `feat/bakery-api`) |
+
+흐름: `feat/*` → PR → `dev` → (릴리스) PR → `main`
+
 - 커밋: `type: 설명` (Conventional Commits)
