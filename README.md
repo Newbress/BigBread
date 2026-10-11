@@ -66,7 +66,29 @@ curl "localhost:8080/api/bakeries?lat=36.3283&lng=127.4280&radius=1500&sort=DIST
 ./gradlew :api:bootRun --args="--spring.profiles.active=dev"
 ```
 
+## 프론트엔드 (지도 화면)
+
+카카오맵 위에 빵집 마커를 올리고, 구 필터와 내 위치 기반 목록(반경·거리순)을 API에 연결한다.
+
+1. 레포 루트 `.env`에 카카오 **JavaScript 키**를 넣는다: `KAKAO_JS_KEY=...`
+2. [Kakao Developers](https://developers.kakao.com) → 내 애플리케이션에서 설정한다.
+   - 앱 설정 → 플랫폼 → **Web** → 사이트 도메인에 `http://localhost:5173` 등록 (배포 시 운영 도메인도 추가)
+   - 제품 설정 → **카카오맵**을 사용 설정 ON
+3. 백엔드를 `dev` 프로필로 띄우고(샘플 데이터) 프론트엔드를 실행한다.
+
+```bash
+./gradlew :api:bootRun --args="--spring.profiles.active=dev"
+cd frontend && npm install && npm run dev      # http://localhost:5173
+```
+
+- Vite가 루트 `.env`를 읽되, 브라우저에는 `VITE_`와 `KAKAO_JS_` 접두사 변수만 노출한다. `KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET` 등은 노출되지 않는다.
+- `.env`를 고친 뒤에는 `npm run dev`를 다시 시작해야 반영된다.
+- 지도가 안 뜨면 화면의 안내 문구를 확인한다: 키 없음 / 도메인 미등록 / 카카오맵 사용 설정 OFF가 흔한 원인이다.
+- 내 위치(Geolocation)는 HTTPS 또는 `localhost`에서만 동작한다.
+
 ## 테스트
+
+프론트엔드 단위 테스트: `cd frontend && npm test` (vitest)
 
 `api` 통합 테스트는 실제 PostGIS DB가 필요하다. 기본값은 `localhost:5432/bigbread`이며
 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`로 변경할 수 있다.
