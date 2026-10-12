@@ -16,6 +16,12 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+    # dev 프로필의 샘플 데이터(R__) 이력이 남은 DB를 기본 프로필로 열어도 검증이 실패하지 않게 한다.
+    ignore-migration-patterns: "repeatable:missing"
+
+  mvc:
+    problemdetails:
+      enabled: true
 
 server:
   port: 8080
