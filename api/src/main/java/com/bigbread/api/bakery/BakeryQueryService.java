@@ -8,6 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -132,6 +133,29 @@ public class BakeryQueryService {
         return new BakeryDetail(head.id(), head.name(), head.district(), head.roadAddress(), head.jibunAddress(),
                 head.lat(), head.lng(), head.phone(), head.openingHours(), head.popularityScore(), head.links(),
                 breads, links);
+    }
+
+    /**
+     * ID 목록으로 요약을 조회한다 (동선 계산용). 없거나 ACTIVE가 아닌 빵집은 결과에서 빠진다.
+     * 반환 순서는 보장하지 않으며 distanceMeters는 항상 null이다.
+     */
+    public List<BakerySummary> findSummariesByIds(Collection<Long> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.sql("""
+                        SELECT b.id, b.name, d.id AS district_id, d.code AS district_code, d.name AS district_name,
+                               b.road_address, ST_Y(b.location) AS lat, ST_X(b.location) AS lng,
+                               b.popularity_score,
+                               ARRAY(SELECT br.name FROM bread br
+                                      WHERE br.bakery_id = b.id AND br.signature ORDER BY br.id LIMIT 3) AS signature_breads,
+                               NULL::double precision AS distance_m
+                          FROM bakery b JOIN district d ON d.id = b.district_id
+                         WHERE b.status = 'ACTIVE' AND b.id IN (:ids)
+                        """)
+                .param("ids", ids)
+                .query((rs, n) -> toSummary(rs))
+                .list();
     }
 
     private BakerySummary toSummary(ResultSet rs) throws SQLException {
