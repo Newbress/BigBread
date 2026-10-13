@@ -40,6 +40,7 @@ cd frontend && npm install && npm run dev
 | GET | `/api/districts` | 대전 5개 구 목록 |
 | GET | `/api/bakeries` | 빵집 목록 (구 필터, 반경 검색, 정렬, 페이지네이션) |
 | GET | `/api/bakeries/{id}` | 빵집 상세 (대표 빵, 원본 게시물 링크, 영업시간, 인스타·카카오맵 링크) |
+| POST | `/api/routes` | 선택한 빵집들의 도보 동선 (방문 순서, 구간별 거리·시간, 카카오맵 길찾기 링크) |
 
 `/api/bakeries` 쿼리 파라미터
 
@@ -57,6 +58,27 @@ curl "localhost:8080/api/bakeries?lat=36.3283&lng=127.4280&radius=1500&sort=DIST
 ```
 
 잘못된 요청은 400, 없거나 숨김 처리된 빵집은 404를 [ProblemDetail](https://www.rfc-editor.org/rfc/rfc9457) 형식으로 반환한다.
+
+### 도보 동선 `POST /api/routes`
+
+| 필드 | 설명 |
+|---|---|
+| `bakeryIds` | 방문할 빵집 ID (1~10개, 중복 불가) |
+| `start` | 출발 위치 `{lat, lng}` (선택). 없으면 첫 빵집이 출발점 |
+| `order` | `NEAREST`(기본, 출발지 기준 **최단 동선**) / `POPULARITY`(인기순) / `MANUAL`(요청 순서 그대로) |
+
+```bash
+curl -X POST localhost:8080/api/routes -H 'Content-Type: application/json' \
+  -d '{"bakeryIds":[1,2,3],"start":{"lat":36.3283,"lng":127.4280},"order":"NEAREST"}'
+```
+
+응답에는 방문 순서대로 `stops[]`(빵집 요약 + 직전 지점에서의 `leg`: 거리 m, 소요 분, `kakaoWalkUrl`), 총 거리·시간,
+지도에 그릴 `path[]` 좌표가 들어간다.
+
+- `NEAREST`는 Held-Karp 동적 계획법으로 구한 **정확한 최단 경로**다 (출발지로 돌아오지 않는 열린 경로, 최대 10곳).
+- **거리와 시간은 직선거리 기반 추정**이라 응답의 `estimated`가 `true`다. 도보 시간은 시속 4km, 우회 계수 1.3(가정값)으로 계산한다.
+  실제 길을 따라가는 경로선은 카카오 모빌리티 도보 길찾기(Directions) 권한을 받은 뒤 `WalkingRouteProvider` 구현체를 추가해 교체한다.
+- `kakaoWalkUrl`은 구간(출발 → 도착) 단위 카카오맵 도보 길찾기 링크다.
 
 ### 개발용 샘플 데이터
 
