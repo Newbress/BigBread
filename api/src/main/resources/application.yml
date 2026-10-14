@@ -23,6 +23,11 @@ spring:
     problemdetails:
       enabled: true
 
+bigbread:
+  kakao:
+    # 서버에서만 쓰는 REST API 키 (.env의 KAKAO_REST_API_KEY). 없으면 직선 추정으로 동작한다.
+    rest-api-key: ${KAKAO_REST_API_KEY:}
+
 server:
   port: 8080
 

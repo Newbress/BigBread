@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
  *   A  (0m,   인기 30) ── B (500m, 인기 90) ── ... ── C (3km, 인기 60)
  * </pre>
  */
-@SpringBootTest
+@SpringBootTest(properties = "bigbread.kakao.rest-api-key=") // 테스트는 외부 API 없이 직선 추정으로 돌린다
 @AutoConfigureMockMvc
 @Transactional
 class RouteApiTest {

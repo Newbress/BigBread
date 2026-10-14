@@ -1,7 +1,6 @@
 package com.bigbread.api.route;
 
 import java.util.List;
-import org.springframework.stereotype.Component;
 
 /**
  * 직선거리로 도보 구간을 추정한다. 실제 길을 따라가지 않으므로 응답에 {@code estimated = true}로 표시된다.
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Component;
  *   <li>우회 계수: 직선거리보다 실제 도보 거리가 길다는 점을 반영한 1.3배 (가정값, 실측 근거 없음)</li>
  * </ul>
  */
-@Component
 public class EstimatedWalkingRouteProvider implements WalkingRouteProvider {
 
     static final double WALK_METERS_PER_MINUTE = 4_000.0 / 60.0;

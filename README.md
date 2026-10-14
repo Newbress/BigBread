@@ -76,8 +76,10 @@ curl -X POST localhost:8080/api/routes -H 'Content-Type: application/json' \
 지도에 그릴 `path[]` 좌표가 들어간다.
 
 - `NEAREST`는 Held-Karp 동적 계획법으로 구한 **정확한 최단 경로**다 (출발지로 돌아오지 않는 열린 경로, 최대 10곳).
-- **거리와 시간은 직선거리 기반 추정**이라 응답의 `estimated`가 `true`다. 도보 시간은 시속 4km, 우회 계수 1.3(가정값)으로 계산한다.
-  실제 길을 따라가는 경로선은 카카오 모빌리티 도보 길찾기(Directions) 권한을 받은 뒤 `WalkingRouteProvider` 구현체를 추가해 교체한다.
+- 구간마다 [카카오맵 도보 경로 조회](https://developers.kakao.com/docs/ko/kakaomap/rest-api)(`GET /v2/routing/walk`)를 호출해
+  **실제 길을 따라가는 거리·소요 시간·경로선**을 구한다. 서버의 `KAKAO_REST_API_KEY`로 인증하며, 앱에서 **카카오맵 사용 설정**이 켜져 있어야 한다.
+- 키가 없거나 조회가 실패한 구간은 직선거리 기반 추정(시속 4km, 우회 계수 1.3 가정)으로 대신하고, 그 경우 응답의 `estimated`가 `true`다.
+- 최단 동선(`NEAREST`)의 방문 순서는 직선거리로 정한 뒤, 정해진 순서의 구간에만 실제 경로를 조회한다. 동선 한 번에 최대 10번 호출한다.
 - `kakaoWalkUrl`은 구간(출발 → 도착) 단위 카카오맵 도보 길찾기 링크다.
 
 ### 개발용 샘플 데이터
