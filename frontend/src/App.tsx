@@ -11,6 +11,7 @@ import { useBakeries } from './hooks/useBakeries.ts'
 import { useDistricts } from './hooks/useDistricts.ts'
 import { useGeolocation } from './hooks/useGeolocation.ts'
 import { useRoute } from './hooks/useRoute.ts'
+import { routeColor } from './lib/route.ts'
 
 const DEFAULT_RADIUS = 3000
 
@@ -44,6 +45,16 @@ export default function App() {
 
   const routeResult = view === 'route' ? route.route : null
   const mapBakeries = useMemo(() => (routeResult ? routeResult.stops.map((stop) => stop.bakery) : items), [routeResult, items])
+  const pinColors = useMemo(() => routeResult?.stops.map((stop) => routeColor(stop.seq)), [routeResult])
+  const segments = useMemo(
+    () =>
+      routeResult?.stops.flatMap((stop) =>
+        stop.leg && stop.leg.path.length >= 2
+          ? [{ path: stop.leg.path, color: routeColor(stop.seq), estimated: stop.leg.estimated }]
+          : [],
+      ),
+    [routeResult],
+  )
 
   const handleSelect = (id: number) => {
     setSelectedId(id)
@@ -148,8 +159,9 @@ export default function App() {
               selectedId={routeResult ? null : activeId}
               userLocation={geo.location}
               onSelect={handleSelect}
-              path={routeResult?.path}
-              pathEstimated={routeResult?.estimated}
+              segments={segments}
+              pinColors={pinColors}
+              start={routeResult?.start}
             />
           ) : (
             <div className="map map--empty">

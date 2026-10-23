@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { formatDuration } from './format.ts'
-import { MAX_ROUTE_STOPS, routeKey, toggleById } from './route.ts'
+import { MAX_ROUTE_STOPS, ROUTE_COLORS, routeColor, routeKey, toggleById } from './route.ts'
 
 describe('toggleById', () => {
   const item = (id: number) => ({ id })
@@ -38,5 +38,18 @@ describe('formatDuration', () => {
     expect(formatDuration(59)).toBe('59분')
     expect(formatDuration(60)).toBe('1시간')
     expect(formatDuration(65)).toBe('1시간 5분')
+  })
+})
+
+describe('routeColor', () => {
+  it('1번은 갈색, 2번은 초록이고 10곳까지 모두 다른 색이다', () => {
+    expect(routeColor(1)).toBe('#b45309')
+    expect(routeColor(2)).toBe('#15803d')
+    const colors = Array.from({ length: MAX_ROUTE_STOPS }, (_, i) => routeColor(i + 1))
+    expect(new Set(colors).size).toBe(MAX_ROUTE_STOPS)
+  })
+
+  it('색 목록보다 번호가 커지면 처음부터 다시 쓴다', () => {
+    expect(routeColor(ROUTE_COLORS.length + 1)).toBe(routeColor(1))
   })
 })

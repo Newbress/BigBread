@@ -70,10 +70,17 @@ public class BakeryQueryService {
         String distance = c.hasLocation()
                 ? "ST_Distance(b.location::geography, " + POINT + ")"
                 : "NULL::double precision";
+        // 이름은 DB 기본 정렬 규칙(환경마다 다름)에 기대지 않고 "C"(코드포인트 순)로 고정한다.
+        // 한글 완성형은 코드포인트 순이 곧 가나다 순이고, 영문은 대소문자를 무시한다.
+        String byName = "lower(b.name) COLLATE \"C\"";
+        // 1차 기준이 같을 때를 위한 2차·3차 기준을 둔다 (마지막은 항상 id로 결과를 고정).
         String orderBy = switch (c.sort()) {
-            case POPULARITY -> "b.popularity_score DESC, b.id";
-            case DISTANCE -> "distance_m, b.id";
-            case NAME -> "b.name, b.id";
+            // 인기 점수 → 가까운 순(위치가 있을 때) → 이름
+            case POPULARITY -> "b.popularity_score DESC, distance_m ASC NULLS LAST, " + byName + ", b.id";
+            // 거리(10m 단위로 묶음) → 인기 점수 → 이름
+            case DISTANCE -> "round((" + distance + ") / 10), b.popularity_score DESC, " + byName + ", b.id";
+            // 이름 → 인기 점수
+            case NAME -> byName + ", b.popularity_score DESC, b.id";
         };
         String select = """
                 SELECT b.id, b.name, d.id AS district_id, d.code AS district_code, d.name AS district_name,

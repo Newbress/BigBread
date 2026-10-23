@@ -105,6 +105,8 @@ class RouteApiTest {
                 .andExpect(jsonPath("$.estimated").value(true))
                 .andExpect(jsonPath("$.path", hasSize(4))) // 출발지 + 정류장 3개
                 .andExpect(jsonPath("$.stops[0].leg.kakaoWalkUrl", startsWith("https://map.kakao.com/link/by/walk/")))
+                .andExpect(jsonPath("$.stops[0].leg.path", hasSize(2))) // 구간별 경로 (직선 추정이라 두 점)
+                .andExpect(jsonPath("$.stops[0].leg.estimated").value(true))
                 .andReturn().getResponse().getContentAsString();
 
         List<Double> legs = JsonPath.read(body, "$.stops[*].leg.distanceMeters");

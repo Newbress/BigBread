@@ -1,6 +1,7 @@
+import type { CSSProperties } from 'react'
 import type { BakerySummary, RouteOrder, RouteResponse } from '../api/types.ts'
 import { formatDistance, formatDuration, isHttpUrl } from '../lib/format.ts'
-import { MAX_ROUTE_STOPS, ROUTE_ORDER_LABEL } from '../lib/route.ts'
+import { MAX_ROUTE_STOPS, ROUTE_ORDER_LABEL, routeColor, SELECTABLE_ROUTE_ORDERS } from '../lib/route.ts'
 
 type Props = {
   basket: BakerySummary[]
@@ -16,8 +17,6 @@ type Props = {
   onSelect: (id: number) => void
   onBack: () => void
 }
-
-const ORDERS: RouteOrder[] = ['NEAREST', 'POPULARITY', 'MANUAL']
 
 function Basket({ basket, onRemove }: Pick<Props, 'basket' | 'onRemove'>) {
   return (
@@ -49,13 +48,17 @@ function Result({ route, onSelect }: Pick<Props, 'route' | 'onSelect'>) {
       {route.estimated && (
         <p className="notice">일부 구간은 실제 길을 찾지 못해 직선거리로 추정한 값이에요.</p>
       )}
+      <p className="card__meta">
+        도보 시간은 카카오맵 도보 경로 기준이고, 빵집에서 머무는 시간은 포함되지 않아요.
+        {route.start && ' 출발은 내 위치예요.'}
+      </p>
       <ol className="route">
         {route.stops.map((stop) => (
-          <li key={stop.bakery.id} className="route__stop">
+          <li key={stop.bakery.id} className="route__stop" style={{ '--route-color': routeColor(stop.seq) } as CSSProperties}>
             {stop.leg && stop.leg.distanceMeters === 0 && <p className="route__leg">출발 위치와 같은 곳이에요</p>}
             {stop.leg && stop.leg.distanceMeters > 0 && (
               <p className="route__leg">
-                ↓ {formatDistance(stop.leg.distanceMeters)} · 도보 {formatDuration(stop.leg.durationMinutes)}
+                ↓ {stop.leg.estimated && '약 '}{formatDistance(stop.leg.distanceMeters)} · 도보 {formatDuration(stop.leg.durationMinutes)}
                 {isHttpUrl(stop.leg.kakaoWalkUrl) && (
                   <>
                     {' '}
@@ -110,7 +113,7 @@ export default function RoutePanel(props: Props) {
             <label className="field">
               방문 순서
               <select value={order} onChange={(e) => onOrderChange(e.target.value as RouteOrder)}>
-                {ORDERS.map((value) => (
+                {SELECTABLE_ROUTE_ORDERS.map((value) => (
                   <option key={value} value={value}>
                     {ROUTE_ORDER_LABEL[value]}
                   </option>

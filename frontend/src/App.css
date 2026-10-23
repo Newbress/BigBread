@@ -530,3 +530,55 @@
   background: var(--danger-soft);
   color: var(--danger);
 }
+
+/* 동선: 정류장 번호별 색 (N번 마커 = 그곳으로 가는 선 = 카드의 번호 배지) */
+.pin__num {
+  background: var(--pin-color, #b45309);
+}
+
+.pin--selected .pin__num {
+  background: var(--pin-color, #7c2d12);
+  box-shadow:
+    0 0 0 4px rgba(124, 45, 18, 0.35),
+    var(--shadow);
+}
+
+.route__stop {
+  --route-color: var(--accent);
+}
+
+.route__stop .card__rank {
+  background: var(--route-color);
+  color: #fff;
+}
+
+.route__leg {
+  padding-left: 8px;
+  border-left: 4px solid var(--route-color);
+}
+
+.start-flag {
+  padding: 3px 10px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+}
+
+.map__controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+}
+
+.map__controls .btn {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}

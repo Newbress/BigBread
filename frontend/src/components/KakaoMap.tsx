@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { BakerySummary, Coords } from '../api/types.ts'
 import { DAEJEON_CENTER, DEFAULT_MAP_LEVEL } from '../config.ts'
 import { loadKakaoMaps } from '../lib/kakao.ts'
+import type { RouteSegment } from '../lib/route.ts'
 
 type Props = {
   appKey: string
@@ -9,10 +10,12 @@ type Props = {
   selectedId: number | null
   userLocation: Coords | null
   onSelect: (id: number) => void
-  /** 동선 경로선 좌표. 없으면 선을 그리지 않는다. */
-  path?: Coords[]
-  /** true면 실제 길이 아니라 직선 추정이 섞인 선이라 점선으로 그린다. */
-  pathEstimated?: boolean
+  /** 동선 구간별 경로선. 구간마다 색이 다르고, 직선 추정 구간은 점선으로 그린다. */
+  segments?: RouteSegment[]
+  /** bakeries와 같은 순서의 마커 색. 없으면 기본 색 */
+  pinColors?: string[]
+  /** 동선 출발 위치. 있으면 '출발' 깃발을 표시한다. */
+  start?: Coords | null
 }
 
 type Pin = {
@@ -34,10 +37,11 @@ function fitTo(map: kakao.maps.Map, points: kakao.maps.LatLng[]) {
   map.setBounds(bounds, 60, 60, 60, 60)
 }
 
-function createPinElement(bakery: BakerySummary, rank: number, onClick: () => void): HTMLElement {
+function createPinElement(bakery: BakerySummary, rank: number, color: string | undefined, onClick: () => void): HTMLElement {
   const element = document.createElement('button')
   element.type = 'button'
   element.className = 'pin'
+  if (color) element.style.setProperty('--pin-color', color)
   element.setAttribute('aria-label', `${rank}. ${bakery.name}`)
 
   // 텍스트는 textContent로만 넣는다 (수집된 이름이 HTML로 해석되지 않게).
@@ -53,7 +57,7 @@ function createPinElement(bakery: BakerySummary, rank: number, onClick: () => vo
   return element
 }
 
-const NO_PATH: Coords[] = []
+const NO_SEGMENTS: RouteSegment[] = []
 
 export default function KakaoMap({
   appKey,
@@ -61,12 +65,14 @@ export default function KakaoMap({
   selectedId,
   userLocation,
   onSelect,
-  path = NO_PATH,
-  pathEstimated = false,
+  segments = NO_SEGMENTS,
+  pinColors,
+  start = null,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<kakao.maps.Map | null>(null)
   const pinsRef = useRef(new Map<number, Pin>())
+  const viewPointsRef = useRef<kakao.maps.LatLng[]>([])
   const onSelectRef = useRef(onSelect)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -114,37 +120,62 @@ export default function KakaoMap({
     const pins = pinsRef.current
     bakeries.forEach((bakery, index) => {
       const position = new kakao.maps.LatLng(bakery.lat, bakery.lng)
-      const element = createPinElement(bakery, index + 1, () => onSelectRef.current(bakery.id))
+      const element = createPinElement(bakery, index + 1, pinColors?.[index], () => onSelectRef.current(bakery.id))
       const overlay = new kakao.maps.CustomOverlay({ position, content: element, yAnchor: 1, clickable: true, map })
       pins.set(bakery.id, { overlay, element, position })
     })
 
     const points = bakeries.map((bakery) => new kakao.maps.LatLng(bakery.lat, bakery.lng))
     if (userLocation) points.push(new kakao.maps.LatLng(userLocation.lat, userLocation.lng))
-    path.forEach((p) => points.push(new kakao.maps.LatLng(p.lat, p.lng)))
+    if (start) points.push(new kakao.maps.LatLng(start.lat, start.lng))
+    segments.forEach((segment) => segment.path.forEach((p) => points.push(new kakao.maps.LatLng(p.lat, p.lng))))
+    viewPointsRef.current = points
     fitTo(map, points)
 
     return () => {
       pins.forEach((pin) => pin.overlay.setMap(null))
       pins.clear()
     }
-  }, [ready, bakeries, userLocation, path])
+  }, [ready, bakeries, userLocation, segments, pinColors, start])
 
-  // 동선 경로선 (실제 길은 실선, 직선 추정이면 점선)
+  // 동선 경로선: 구간마다 색을 달리하고, 뒤 구간이 위에 오게 쌓는다. (직선 추정이면 점선)
   useEffect(() => {
     const map = mapRef.current
-    if (!ready || !map || path.length < 2) return
-    const line = new kakao.maps.Polyline({
-      path: path.map((p) => new kakao.maps.LatLng(p.lat, p.lng)),
-      strokeWeight: 5,
-      strokeColor: '#b45309',
-      strokeOpacity: 0.85,
-      strokeStyle: pathEstimated ? 'shortdash' : 'solid',
-      zIndex: 0,
+    if (!ready || !map || segments.length === 0) return
+    const lines = segments
+      .filter((segment) => segment.path.length >= 2)
+      .map(
+        (segment, index) =>
+          new kakao.maps.Polyline({
+            path: segment.path.map((p) => new kakao.maps.LatLng(p.lat, p.lng)),
+            strokeWeight: 6,
+            strokeColor: segment.color,
+            strokeOpacity: 0.9,
+            strokeStyle: segment.estimated ? 'shortdash' : 'solid',
+            zIndex: index,
+            map,
+          }),
+      )
+    return () => lines.forEach((line) => line.setMap(null))
+  }, [ready, segments])
+
+  // 동선 출발 깃발
+  useEffect(() => {
+    const map = mapRef.current
+    if (!ready || !map || !start) return
+    const flag = document.createElement('div')
+    flag.className = 'start-flag'
+    flag.textContent = '출발'
+    const overlay = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(start.lat, start.lng),
+      content: flag,
+      xAnchor: 0.5,
+      yAnchor: 2.2,
+      zIndex: 5,
       map,
     })
-    return () => line.setMap(null)
-  }, [ready, path, pathEstimated])
+    return () => overlay.setMap(null)
+  }, [ready, start])
 
   // 선택된 마커 강조
   useEffect(() => {
@@ -182,9 +213,31 @@ export default function KakaoMap({
     return () => overlay.setMap(null)
   }, [ready, userLocation])
 
+  const showAll = () => {
+    if (mapRef.current) fitTo(mapRef.current, viewPointsRef.current)
+  }
+  const goToMe = () => {
+    if (!mapRef.current || !userLocation) return
+    const me = new kakao.maps.LatLng(userLocation.lat, userLocation.lng)
+    mapRef.current.setLevel(4)
+    mapRef.current.panTo(me)
+  }
+
   return (
     <div className="map">
       <div ref={containerRef} className="map__canvas" />
+      {ready && (
+        <div className="map__controls">
+          <button type="button" className="btn btn--small" onClick={showAll}>
+            {segments.length > 0 ? '동선 전체 보기' : '전체 보기'}
+          </button>
+          {userLocation && (
+            <button type="button" className="btn btn--small" onClick={goToMe}>
+              내 위치로
+            </button>
+          )}
+        </div>
+      )}
       {!ready && !error && <p className="map__status">지도를 불러오는 중…</p>}
       {error && (
         <p className="map__status map__status--error" role="alert">

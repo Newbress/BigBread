@@ -71,6 +71,10 @@ export type RouteLeg = {
   durationMinutes: number
   /** 이 구간(직전 지점 → 이 빵집)의 카카오맵 도보 길찾기 링크 */
   kakaoWalkUrl: string
+  /** 이 구간만의 경로 좌표 (구간마다 색을 달리 그리는 데 쓴다) */
+  path: Coords[]
+  /** 이 구간이 실제 길찾기가 아니라 직선 추정이면 true */
+  estimated: boolean
 }
 
 export type RouteStop = {

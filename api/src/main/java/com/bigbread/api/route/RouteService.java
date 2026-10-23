@@ -85,7 +85,8 @@ public class RouteService {
             if (previous != null) {
                 WalkLeg walk = walking.walk(previous, here);
                 leg = new RouteResponse.Leg(walk.distanceMeters(), walk.durationMinutes(),
-                        KakaoMapLinks.walk(previousName, previous, bakery.name(), here));
+                        KakaoMapLinks.walk(previousName, previous, bakery.name(), here), walk.path(),
+                        walk.estimated());
                 totalMeters += walk.distanceMeters();
                 totalMinutes += walk.durationMinutes();
                 estimated |= walk.estimated();
