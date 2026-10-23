@@ -1,5 +1,6 @@
 package com.bigbread.api.route;
 
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,6 +19,10 @@ public class FallbackWalkingRouteProvider implements WalkingRouteProvider {
 
     @Override
     public WalkLeg walk(Point from, Point to) {
+        if (from.equals(to)) {
+            // 같은 지점이면 걸을 구간이 없다. 외부 호출 없이 정확한 0m로 답한다.
+            return new WalkLeg(0, 0, List.of(from, to), false);
+        }
         try {
             return primary.walk(from, to);
         } catch (RuntimeException e) {

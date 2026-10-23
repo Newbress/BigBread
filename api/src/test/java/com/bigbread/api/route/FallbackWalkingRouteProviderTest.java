@@ -27,4 +27,15 @@ class FallbackWalkingRouteProviderTest {
         assertThat(leg.estimated()).isTrue();
         assertThat(leg.distanceMeters()).isGreaterThan(900);
     }
+
+    @Test
+    void 같은_지점이면_외부_호출_없이_추정이_아닌_0m다() {
+        WalkingRouteProvider neverCalled = (a, b) -> {
+            throw new AssertionError("호출되면 안 된다");
+        };
+        WalkLeg leg = new FallbackWalkingRouteProvider(neverCalled, neverCalled).walk(from, from);
+        assertThat(leg.distanceMeters()).isZero();
+        assertThat(leg.durationMinutes()).isZero();
+        assertThat(leg.estimated()).isFalse();
+    }
 }
