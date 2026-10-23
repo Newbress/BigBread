@@ -9,6 +9,10 @@ type Props = {
   selectedId: number | null
   userLocation: Coords | null
   onSelect: (id: number) => void
+  /** 동선 경로선 좌표. 없으면 선을 그리지 않는다. */
+  path?: Coords[]
+  /** true면 실제 길이 아니라 직선 추정이 섞인 선이라 점선으로 그린다. */
+  pathEstimated?: boolean
 }
 
 type Pin = {
@@ -49,7 +53,17 @@ function createPinElement(bakery: BakerySummary, rank: number, onClick: () => vo
   return element
 }
 
-export default function KakaoMap({ appKey, bakeries, selectedId, userLocation, onSelect }: Props) {
+const NO_PATH: Coords[] = []
+
+export default function KakaoMap({
+  appKey,
+  bakeries,
+  selectedId,
+  userLocation,
+  onSelect,
+  path = NO_PATH,
+  pathEstimated = false,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<kakao.maps.Map | null>(null)
   const pinsRef = useRef(new Map<number, Pin>())
@@ -107,13 +121,30 @@ export default function KakaoMap({ appKey, bakeries, selectedId, userLocation, o
 
     const points = bakeries.map((bakery) => new kakao.maps.LatLng(bakery.lat, bakery.lng))
     if (userLocation) points.push(new kakao.maps.LatLng(userLocation.lat, userLocation.lng))
+    path.forEach((p) => points.push(new kakao.maps.LatLng(p.lat, p.lng)))
     fitTo(map, points)
 
     return () => {
       pins.forEach((pin) => pin.overlay.setMap(null))
       pins.clear()
     }
-  }, [ready, bakeries, userLocation])
+  }, [ready, bakeries, userLocation, path])
+
+  // 동선 경로선 (실제 길은 실선, 직선 추정이면 점선)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!ready || !map || path.length < 2) return
+    const line = new kakao.maps.Polyline({
+      path: path.map((p) => new kakao.maps.LatLng(p.lat, p.lng)),
+      strokeWeight: 5,
+      strokeColor: '#b45309',
+      strokeOpacity: 0.85,
+      strokeStyle: pathEstimated ? 'shortdash' : 'solid',
+      zIndex: 0,
+      map,
+    })
+    return () => line.setMap(null)
+  }, [ready, path, pathEstimated])
 
   // 선택된 마커 강조
   useEffect(() => {

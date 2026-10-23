@@ -463,3 +463,70 @@
     0 0 0 6px rgba(29, 78, 216, 0.25),
     var(--shadow);
 }
+
+/* ── 동선 ───────────────────────────────────────────── */
+.app__header .btn {
+  margin-left: auto;
+}
+
+.btn--small {
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.list__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.list__row .card {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.basket {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.basket__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.route {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route__total {
+  margin-top: 16px;
+  font-size: 1.05rem;
+}
+
+.route__leg {
+  margin: 2px 0 6px 12px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.badge--warn {
+  margin-left: 8px;
+  background: var(--danger-soft);
+  color: var(--danger);
+}

@@ -61,3 +61,11 @@ export const PLATFORM_LABEL = {
   NAVER_BLOG: '네이버 블로그',
   INSTAGRAM: '인스타그램',
 } as const
+
+/** 분 단위 시간을 읽기 좋게: 18분, 1시간 5분 */
+export function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes}분`
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  return rest === 0 ? `${hours}시간` : `${hours}시간 ${rest}분`
+}

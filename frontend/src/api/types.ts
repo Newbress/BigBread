@@ -63,3 +63,37 @@ export type SearchParams = {
   sort: BakerySort
   size?: number
 }
+
+export type RouteOrder = 'NEAREST' | 'POPULARITY' | 'MANUAL'
+
+export type RouteLeg = {
+  distanceMeters: number
+  durationMinutes: number
+  /** 이 구간(직전 지점 → 이 빵집)의 카카오맵 도보 길찾기 링크 */
+  kakaoWalkUrl: string
+}
+
+export type RouteStop = {
+  seq: number
+  bakery: BakerySummary
+  /** 출발지가 없는 동선의 첫 정류장은 구간이 없다. */
+  leg: RouteLeg | null
+}
+
+export type RouteResponse = {
+  order: RouteOrder
+  start: Coords | null
+  stops: RouteStop[]
+  totalDistanceMeters: number
+  totalDurationMinutes: number
+  /** true면 실제 길찾기가 아니라 직선거리 기반 추정이 섞여 있다. */
+  estimated: boolean
+  /** 지도에 그릴 경로 좌표 (출발지 포함) */
+  path: Coords[]
+}
+
+export type RouteRequest = {
+  bakeryIds: number[]
+  start: Coords | null
+  order: RouteOrder
+}

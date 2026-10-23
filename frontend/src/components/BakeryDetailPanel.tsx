@@ -6,6 +6,10 @@ import { formatPrice, isHttpUrl, PLATFORM_LABEL, toOpeningHoursRows } from '../l
 type Props = {
   id: number
   onBack: () => void
+  inBasket: boolean
+  basketFull: boolean
+  /** 목록에 없는 빵집(필터로 사라진 경우 등)이면 담을 수 없어 undefined */
+  onToggleBasket?: () => void
 }
 
 /** 어떤 빵집에 대한 응답인지 함께 저장해서, 현재 빵집의 응답이 왔는지(loading)를 계산한다. */
@@ -20,7 +24,7 @@ function ExternalLink({ href, children }: { href: string | null; children: strin
   )
 }
 
-export default function BakeryDetailPanel({ id, onBack }: Props) {
+export default function BakeryDetailPanel({ id, onBack, inBasket, basketFull, onToggleBasket }: Props) {
   const [result, setResult] = useState<Result | null>(null)
 
   useEffect(() => {
@@ -78,6 +82,17 @@ export default function BakeryDetailPanel({ id, onBack }: Props) {
           </header>
 
           <div className="detail__links">
+            {onToggleBasket && (
+              <button
+                type="button"
+                className={inBasket ? 'btn btn--on' : 'btn'}
+                aria-pressed={inBasket}
+                disabled={!inBasket && basketFull}
+                onClick={onToggleBasket}
+              >
+                {inBasket ? '동선에서 빼기' : '동선에 담기'}
+              </button>
+            )}
             <ExternalLink href={detail.links.kakaoMap}>카카오맵에서 보기</ExternalLink>
             <ExternalLink href={detail.links.instagram}>인스타그램</ExternalLink>
           </div>
