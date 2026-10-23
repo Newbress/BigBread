@@ -67,13 +67,13 @@ function Item({ bakery, rank, selected, onSelect, inBasket, basketFull, onToggle
       </button>
       <button
         type="button"
-        className={inBasket ? 'btn btn--small btn--on' : 'btn btn--small'}
-        aria-pressed={inBasket}
+        className={inBasket ? 'btn btn--small btn--toggle btn--on' : 'btn btn--small btn--toggle'}
         disabled={!inBasket && basketFull}
         title={!inBasket && basketFull ? '동선에는 최대 10곳까지 담을 수 있어요' : undefined}
+        aria-label={`${inBasket ? '담음' : '담기'}: ${bakery.name}`}
         onClick={() => onToggleBasket(bakery)}
       >
-        {inBasket ? '담음' : '동선에 담기'}
+        {inBasket ? '담음' : '담기'}
       </button>
     </li>
   )

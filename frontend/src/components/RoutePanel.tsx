@@ -15,7 +15,6 @@ type Props = {
   onRemove: (id: number) => void
   onClear: () => void
   onSelect: (id: number) => void
-  onBack: () => void
 }
 
 function Basket({ basket, onRemove }: Pick<Props, 'basket' | 'onRemove'>) {
@@ -89,13 +88,10 @@ function Result({ route, onSelect }: Pick<Props, 'route' | 'onSelect'>) {
 }
 
 export default function RoutePanel(props: Props) {
-  const { basket, order, onOrderChange, hasStart, route, planning, error, onPlan, onClear, onBack } = props
+  const { basket, order, onOrderChange, hasStart, route, planning, error, onPlan, onClear } = props
 
   return (
     <section className="detail" aria-label="내 동선" aria-busy={planning}>
-      <button type="button" className="btn btn--ghost" onClick={onBack}>
-        ← 목록으로
-      </button>
       <h2>
         내 동선{' '}
         <span className="card__meta">
@@ -104,7 +100,7 @@ export default function RoutePanel(props: Props) {
       </h2>
 
       {basket.length === 0 ? (
-        <p className="notice">목록에서 &lsquo;동선에 담기&rsquo;를 눌러 가고 싶은 빵집을 담아 보세요.</p>
+        <p className="notice">목록에서 &lsquo;담기&rsquo;를 눌러 가고 싶은 빵집을 담아 보세요.</p>
       ) : (
         <>
           <Basket basket={basket} onRemove={props.onRemove} />

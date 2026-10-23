@@ -85,12 +85,12 @@ export default function BakeryDetailPanel({ id, onBack, inBasket, basketFull, on
             {onToggleBasket && (
               <button
                 type="button"
-                className={inBasket ? 'btn btn--on' : 'btn'}
+                className={inBasket ? 'btn btn--toggle btn--on' : 'btn btn--toggle'}
                 aria-pressed={inBasket}
                 disabled={!inBasket && basketFull}
                 onClick={onToggleBasket}
               >
-                {inBasket ? '동선에서 빼기' : '동선에 담기'}
+                {inBasket ? '담음' : '담기'}
               </button>
             )}
             <ExternalLink href={detail.links.kakaoMap}>카카오맵에서 보기</ExternalLink>

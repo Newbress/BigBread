@@ -43,6 +43,9 @@ export default function App() {
   const detailId = selectedId !== null && (activeId !== null || basketIds.has(selectedId)) ? selectedId : null
   const detailSummary = detailId === null ? undefined : (items.find((b) => b.id === detailId) ?? route.basket.find((b) => b.id === detailId))
 
+  // 상세는 들어온 화면(목록/동선)의 탭 아래에 열린다.
+  const tab: 'list' | 'route' = view === 'route' || (view === 'detail' && returnView === 'route') ? 'route' : 'list'
+
   const routeResult = view === 'route' ? route.route : null
   const mapBakeries = useMemo(() => (routeResult ? routeResult.stops.map((stop) => stop.bakery) : items), [routeResult, items])
   const pinColors = useMemo(() => routeResult?.stops.map((stop) => routeColor(stop.seq)), [routeResult])
@@ -79,18 +82,30 @@ export default function App() {
           대빵 <span aria-hidden="true">🥖</span>
         </h1>
         <p>대전 빵집 지도</p>
-        <button
-          type="button"
-          className={view === 'route' ? 'btn btn--small btn--on' : 'btn btn--small'}
-          aria-pressed={view === 'route'}
-          onClick={() => setView(view === 'route' ? 'list' : 'route')}
-        >
-          내 동선 ({route.basket.length})
-        </button>
       </header>
 
       <main className="app__main">
         <aside className="app__side">
+          <nav className="tabs" aria-label="보기 전환">
+            <button
+              type="button"
+              className="tabs__tab"
+              aria-current={tab === 'list' ? 'page' : undefined}
+              onClick={() => setView('list')}
+            >
+              빵집 목록
+            </button>
+            <button
+              type="button"
+              className="tabs__tab"
+              aria-current={tab === 'route' ? 'page' : undefined}
+              onClick={() => setView('route')}
+            >
+              내 동선 ({route.basket.length})
+            </button>
+          </nav>
+
+          {tab === 'list' && (
           <FilterBar
             districts={districts}
             district={district}
@@ -105,6 +120,7 @@ export default function App() {
             radius={radius}
             onRadiusChange={setRadius}
           />
+          )}
 
           {districtError && (
             <p className="notice notice--error" role="alert">
@@ -133,7 +149,6 @@ export default function App() {
               onRemove={route.remove}
               onClear={route.clear}
               onSelect={handleSelect}
-              onBack={() => setView('list')}
             />
           ) : (
             <BakeryList

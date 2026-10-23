@@ -465,10 +465,6 @@
 }
 
 /* ── 동선 ───────────────────────────────────────────── */
-.app__header .btn {
-  margin-left: auto;
-}
-
 .btn--small {
   padding: 4px 10px;
   font-size: 0.85rem;
@@ -581,4 +577,37 @@
 .map__controls .btn {
   background: var(--surface);
   box-shadow: var(--shadow);
+}
+
+/* 사이드 패널 탭: 빵집 목록 / 내 동선 */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+
+.tabs__tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent-strong);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabs__tab[aria-current='page'] {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-weight: 800;
+}
+
+/* 담기/담음 토글: 상태가 바뀌어도 버튼 폭이 변하지 않게 한다. */
+.btn--toggle {
+  min-width: 4.2em;
+  text-align: center;
 }
