@@ -6,11 +6,14 @@ import BakeryDetailPanel from './components/BakeryDetailPanel.tsx'
 import BakeryList from './components/BakeryList.tsx'
 import FilterBar from './components/FilterBar.tsx'
 import KakaoMap from './components/KakaoMap.tsx'
+import RoutePanel from './components/RoutePanel.tsx'
 import { KAKAO_JS_KEY } from './config.ts'
 import { useBakeries } from './hooks/useBakeries.ts'
 import { useAuth } from './hooks/useAuth.ts'
 import { useDistricts } from './hooks/useDistricts.ts'
 import { useGeolocation } from './hooks/useGeolocation.ts'
+import { useRoute } from './hooks/useRoute.ts'
+import { routeColor } from './lib/route.ts'
 
 const DEFAULT_RADIUS = 3000
 
@@ -25,7 +28,9 @@ export default function App() {
   const [sort, setSort] = useState<BakerySort>('POPULARITY')
   const [radius, setRadius] = useState<number | null>(DEFAULT_RADIUS)
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [view, setView] = useState<'list' | 'detail'>('list')
+  const [view, setView] = useState<'list' | 'detail' | 'route'>('list')
+  // 상세에서 '뒤로'를 눌렀을 때 돌아갈 화면
+  const [returnView, setReturnView] = useState<'list' | 'route'>('list')
 
   const params = useMemo<SearchParams>(
     () => ({ district, location: geo.location, radius: geo.location ? radius : null, sort }),
@@ -33,12 +38,35 @@ export default function App() {
   )
   const { data, loading, error } = useBakeries(params)
   const items = useMemo(() => data?.items ?? [], [data])
+  const route = useRoute(geo.location)
+  const basketIds = useMemo(() => new Set(route.basket.map((bakery) => bakery.id)), [route.basket])
 
   // 필터가 바뀌어 결과에서 사라진 빵집은 선택을 풀어 준다.
   const activeId = selectedId !== null && items.some((bakery) => bakery.id === selectedId) ? selectedId : null
 
+  // 상세는 목록에 없어도 동선에 담긴 빵집이면 열 수 있다.
+  const detailId = selectedId !== null && (activeId !== null || basketIds.has(selectedId)) ? selectedId : null
+  const detailSummary = detailId === null ? undefined : (items.find((b) => b.id === detailId) ?? route.basket.find((b) => b.id === detailId))
+
+  // 상세는 들어온 화면(목록/동선)의 탭 아래에 열린다.
+  const tab: 'list' | 'route' = view === 'route' || (view === 'detail' && returnView === 'route') ? 'route' : 'list'
+
+  const routeResult = view === 'route' ? route.route : null
+  const mapBakeries = useMemo(() => (routeResult ? routeResult.stops.map((stop) => stop.bakery) : items), [routeResult, items])
+  const pinColors = useMemo(() => routeResult?.stops.map((stop) => routeColor(stop.seq)), [routeResult])
+  const segments = useMemo(
+    () =>
+      routeResult?.stops.flatMap((stop) =>
+        stop.leg && stop.leg.path.length >= 2
+          ? [{ path: stop.leg.path, color: routeColor(stop.seq), estimated: stop.leg.estimated }]
+          : [],
+      ),
+    [routeResult],
+  )
+
   const handleSelect = (id: number) => {
     setSelectedId(id)
+    if (view !== 'detail') setReturnView(view)
     setView('detail')
   }
 
@@ -85,6 +113,26 @@ export default function App() {
 
       <main className="app__main">
         <aside className="app__side">
+          <nav className="tabs" aria-label="보기 전환">
+            <button
+              type="button"
+              className="tabs__tab"
+              aria-current={tab === 'list' ? 'page' : undefined}
+              onClick={() => setView('list')}
+            >
+              빵집 목록
+            </button>
+            <button
+              type="button"
+              className="tabs__tab"
+              aria-current={tab === 'route' ? 'page' : undefined}
+              onClick={() => setView('route')}
+            >
+              내 동선 ({route.basket.length})
+            </button>
+          </nav>
+
+          {tab === 'list' && (
           <FilterBar
             districts={districts}
             district={district}
@@ -99,6 +147,7 @@ export default function App() {
             radius={radius}
             onRadiusChange={setRadius}
           />
+          )}
 
           {districtError && (
             <p className="notice notice--error" role="alert">
@@ -106,8 +155,28 @@ export default function App() {
             </p>
           )}
 
-          {view === 'detail' && activeId !== null ? (
-            <BakeryDetailPanel id={activeId} onBack={() => setView('list')} />
+          {view === 'detail' && detailId !== null ? (
+            <BakeryDetailPanel
+              id={detailId}
+              onBack={() => setView(returnView)}
+              inBasket={basketIds.has(detailId)}
+              basketFull={route.full}
+              onToggleBasket={detailSummary ? () => route.toggle(detailSummary) : undefined}
+            />
+          ) : view === 'route' ? (
+            <RoutePanel
+              basket={route.basket}
+              order={route.order}
+              onOrderChange={route.setOrder}
+              hasStart={geo.location !== null}
+              route={route.route}
+              planning={route.planning}
+              error={route.error}
+              onPlan={route.plan}
+              onRemove={route.remove}
+              onClear={route.clear}
+              onSelect={handleSelect}
+            />
           ) : (
             <BakeryList
               items={items}
@@ -117,6 +186,9 @@ export default function App() {
               hasLocation={geo.location !== null}
               selectedId={activeId}
               onSelect={handleSelect}
+              basketIds={basketIds}
+              basketFull={route.full}
+              onToggleBasket={route.toggle}
             />
           )}
         </aside>
@@ -125,10 +197,13 @@ export default function App() {
           {KAKAO_JS_KEY ? (
             <KakaoMap
               appKey={KAKAO_JS_KEY}
-              bakeries={items}
-              selectedId={activeId}
+              bakeries={mapBakeries}
+              selectedId={routeResult ? null : activeId}
               userLocation={geo.location}
               onSelect={handleSelect}
+              segments={segments}
+              pinColors={pinColors}
+              start={routeResult?.start}
             />
           ) : (
             <div className="map map--empty">

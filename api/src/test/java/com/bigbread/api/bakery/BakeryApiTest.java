@@ -166,6 +166,57 @@ class BakeryApiTest {
         mvc.perform(get("/api/bakeries/{id}", hidden)).andExpect(status().isNotFound());
     }
 
+    @Test
+    void 인기순에서_점수가_같으면_가까운_순_그다음_이름순이다() throws Exception {
+        // 기준점(35.0, 127.0) 주변에만 만든다. 모두 점수 70.
+        insert("동점먼곳", 3, 35.0 + HALF_KM * 2, 127.0, 70, "ACTIVE"); // 약 1km
+        insert("동점나", 3, 35.0 + HALF_KM, 127.0, 70, "ACTIVE");       // 약 500m
+        insert("동점가", 3, 35.0 + HALF_KM, 127.0, 70, "ACTIVE");       // 약 500m, 이름이 앞섬
+        insert("동점높음", 3, 35.0 + HALF_KM * 3, 127.0, 95, "ACTIVE"); // 가장 멀지만 점수가 높음
+
+        mvc.perform(get("/api/bakeries")
+                        .param("lat", "35.0").param("lng", "127.0").param("radius", "3000").param("sort", "POPULARITY"))
+                .andExpect(jsonPath("$.items[*].name", contains("동점높음", "동점가", "동점나", "동점먼곳")));
+    }
+
+    @Test
+    void 인기순에서_점수와_위치가_모두_같으면_이름순이다() throws Exception {
+        insert("정렬다", 3, 35.5, 127.0, 70, "ACTIVE");
+        insert("정렬가", 3, 35.5, 127.0, 70, "ACTIVE");
+        insert("정렬나", 3, 35.5, 127.0, 70, "ACTIVE");
+
+        mvc.perform(get("/api/bakeries").param("lat", "35.5").param("lng", "127.0").param("radius", "100"))
+                .andExpect(jsonPath("$.items[*].name", contains("정렬가", "정렬나", "정렬다")));
+    }
+
+    @Test
+    void 이름순은_가나다순이고_같은_이름이면_인기순이다() throws Exception {
+        insert("가나다빵", 3, 35.2, 127.0, 20, "ACTIVE");
+        insert("가나다빵", 3, 35.2, 127.0, 80, "ACTIVE");
+        insert("하늘빵", 3, 35.2, 127.0, 99, "ACTIVE");
+        insert("Boulangerie", 3, 35.2, 127.0, 50, "ACTIVE");
+        insert("나비빵", 3, 35.2, 127.0, 10, "ACTIVE");
+
+        mvc.perform(get("/api/bakeries").param("lat", "35.2").param("lng", "127.0").param("radius", "100")
+                        .param("sort", "NAME"))
+                .andExpect(jsonPath("$.items[*].name",
+                        contains("Boulangerie", "가나다빵", "가나다빵", "나비빵", "하늘빵")))
+                .andExpect(jsonPath("$.items[1].popularityScore").value(80.0))
+                .andExpect(jsonPath("$.items[2].popularityScore").value(20.0));
+    }
+
+    @Test
+    void 거리순은_10m_안팎이면_같은_거리로_보고_인기순으로_가른다() throws Exception {
+        // 두 곳 모두 약 500m이고 2~3m 차이(10m 단위로는 같은 거리). 더 먼 쪽이 인기가 높다.
+        insert("거리근접", 3, 34.0 + HALF_KM, 127.0, 10, "ACTIVE");
+        insert("거리근접인기", 3, 34.0 + HALF_KM + 0.00002, 127.0, 90, "ACTIVE");
+        insert("거리가까움", 3, 34.0 + HALF_KM / 5, 127.0, 5, "ACTIVE"); // 약 100m
+
+        mvc.perform(get("/api/bakeries")
+                        .param("lat", "34.0").param("lng", "127.0").param("radius", "1000").param("sort", "DISTANCE"))
+                .andExpect(jsonPath("$.items[*].name", contains("거리가까움", "거리근접인기", "거리근접")));
+    }
+
     private long insert(String name, int districtId, double lat, double lng, double score, String status) {
         Long id = jdbc.queryForObject("""
                 INSERT INTO bakery (name, district_id, location, popularity_score, status)

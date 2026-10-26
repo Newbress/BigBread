@@ -34,6 +34,21 @@ declare namespace kakao.maps {
     relayout(): void
   }
 
+  interface PolylineOptions {
+    path: LatLng[]
+    strokeWeight?: number
+    strokeColor?: string
+    strokeOpacity?: number
+    strokeStyle?: 'solid' | 'shortdash' | 'dash'
+    zIndex?: number
+    map?: Map | null
+  }
+
+  class Polyline {
+    constructor(options: PolylineOptions)
+    setMap(map: Map | null): void
+  }
+
   interface CustomOverlayOptions {
     position: LatLng
     content: HTMLElement | string

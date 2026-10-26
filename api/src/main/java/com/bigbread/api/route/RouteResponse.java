@@ -27,6 +27,13 @@ public record RouteResponse(
     public record Stop(int seq, BakerySummary bakery, Leg leg) {
     }
 
-    public record Leg(double distanceMeters, int durationMinutes, String kakaoWalkUrl) {
+    /**
+     * 직전 지점에서 이 정류장까지의 구간.
+     *
+     * @param path      이 구간만의 경로 좌표 (지도에서 구간마다 색을 달리 그릴 때 쓴다)
+     * @param estimated 이 구간이 실제 길찾기가 아니라 직선 추정이면 true
+     */
+    public record Leg(double distanceMeters, int durationMinutes, String kakaoWalkUrl, List<Point> path,
+                      boolean estimated) {
     }
 }
