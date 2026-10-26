@@ -40,6 +40,10 @@ cd frontend && npm install && npm run dev
 | GET | `/api/districts` | 대전 5개 구 목록 |
 | GET | `/api/bakeries` | 빵집 목록 (구 필터, 반경 검색, 정렬, 페이지네이션) |
 | GET | `/api/auth/providers` | 로그인 가능한 소셜 제공자 (키가 설정된 것만) |
+| GET | `/api/auth/id-available?loginId=` | 자체 가입 아이디 중복 확인 |
+| POST | `/api/auth/signup` | 자체 가입 요청 (인증 메일 발송) |
+| POST | `/api/auth/verify-email` | 메일 링크의 토큰으로 가입 완료 |
+| POST | `/api/auth/login` | 자체 로그인 (아이디/비밀번호) |
 | GET | `/api/me` | 로그인 상태와 내 정보 (비로그인이면 `authenticated: false`) |
 | POST | `/api/logout` | 로그아웃 (CSRF 토큰 필요) |
 | GET | `/api/bakeries/{id}` | 빵집 상세 (대표 빵, 원본 게시물 링크, 영업시간, 인스타·카카오맵 링크) |
@@ -163,6 +167,33 @@ http://localhost:5173/login/oauth2/code/google
    - 도보 시간은 카카오맵 도보 경로 기준이며 빵집에서 머무는 시간은 포함하지 않는다.
    - 실제 길을 따라가는 선은 **실선**, 길찾기에 실패해 직선으로 추정한 구간이 섞이면 **점선**과 "일부 직선 기준" 표시가 나온다.
    - 담은 빵집·순서·출발지가 바뀌면 이전 결과는 숨겨지고, 다시 만들어야 한다.
+
+## 자체 로그인 (아이디/비밀번호)
+
+소셜 로그인과 같은 세션을 쓴다 (`/api/me`, 로그아웃 동일). 변경 요청은 모두 CSRF 토큰이 필요하다.
+
+| 항목 | 규칙 |
+|---|---|
+| 아이디 | 영문으로 시작하는 영문·숫자 5~20자, **대소문자 구분 없음**(소문자로 저장), 숫자는 필수 아님. `admin` 등 예약어 금지 |
+| 비밀번호 | 10~128자, 영문·숫자·특수문자 각 1개 이상, 서로 다른 문자 5개 이상. 아이디를 포함하거나 흔한 단어(`Password1234!` 등)면 거부 |
+| 이메일 | 가입 인증과 (이후) 비밀번호 재설정·아이디 찾기에 쓰는 복구 수단. 소문자로 저장 |
+
+흐름: `signup` → 인증 메일의 링크(`{APP_BASE_URL}/verify-email?token=...`, **24시간**, 1회용) → `verify-email` → 계정 생성 → `login`.
+
+- **인증이 끝나야 계정이 만들어진다.** 가입 요청은 `pending_signup`에만 저장되고, 링크로 인증하면 `app_user` + `local_credential`이 생긴다 (남의 이메일·아이디를 미리 점유하는 계정이 없다).
+- 이미 가입된 이메일로 가입을 시도해도 **응답은 똑같고**, 그 이메일 주인에게만 "이미 가입돼 있어요" 메일이 간다. 로그인 실패 메시지도 아이디 없음/비밀번호 틀림을 구분하지 않는다.
+- 비밀번호는 Argon2id로 해시해 저장하고(`{argon2}` 접두사로 알고리즘 교체 가능), 인증 토큰은 SHA-256 해시만 저장한다. 로그인하면 세션 ID를 새로 발급한다.
+- **메일 발송**: 개발(`dev` 프로필)에서는 인증 링크를 **서버 로그에 출력**한다. 그 외 환경은 발송 수단이 없어 회원가입이 `503`으로 막힌다 (운영 SMTP는 `AuthMailer` 구현체를 추가하면 켜진다).
+- 아직 없는 것: 비밀번호 재설정, 아이디 찾기, 로그인 잠금/요청 제한(2단계), 화면(3단계), 비밀번호 변경·탈퇴(4단계).
+
+```bash
+# 개발에서 확인하기 (CSRF 쿠키를 먼저 받는다)
+curl -c jar -b jar localhost:8080/api/me
+curl -c jar -b jar -H "X-XSRF-TOKEN: <jar의 XSRF-TOKEN 값>" -H 'Content-Type: application/json' \
+  -X POST localhost:8080/api/auth/signup \
+  -d '{"loginId":"BreadFan","email":"fan@example.com","password":"Bread-Lover#2024","nickname":"빵순이","agreedToTerms":true}'
+# 서버 로그에 찍힌 verify-email 링크의 token으로 POST /api/auth/verify-email, 이어서 POST /api/auth/login
+```
 
 ## 테스트
 
