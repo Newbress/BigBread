@@ -646,13 +646,35 @@
 }
 
 .login-btn {
-  display: block;
-  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid transparent;
   border-radius: 10px;
   text-align: center;
   font-weight: 700;
   text-decoration: none;
+}
+
+.login-btn__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  align-self: stretch;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.login-btn__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.login-btn__label {
+  flex: 1;
+  padding: 12px 48px 12px 12px; /* 오른쪽 여백으로 아이콘 폭을 맞춰 글자가 가운데에 오게 한다 */
+  text-align: center;
 }
 
 .login-btn--kakao {
