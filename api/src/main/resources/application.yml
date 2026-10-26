@@ -28,8 +28,29 @@ bigbread:
     # 서버에서만 쓰는 REST API 키 (.env의 KAKAO_REST_API_KEY). 없으면 직선 추정으로 동작한다.
     rest-api-key: ${KAKAO_REST_API_KEY:}
 
+  auth:
+    # 사용자가 접속하는 주소. 제공자 콘솔에 등록할 리다이렉트 URI는 {base-url}/login/oauth2/code/{kakao|naver|google}
+    base-url: ${APP_BASE_URL:http://localhost:5173}
+    # 클라이언트 ID가 비어 있는 제공자는 로그인 버튼이 나오지 않는다. (카카오 클라이언트 ID = REST API 키)
+    kakao:
+      client-id: ${KAKAO_REST_API_KEY:}
+      client-secret: ${KAKAO_CLIENT_SECRET:}
+    naver:
+      client-id: ${NAVER_CLIENT_ID:}
+      client-secret: ${NAVER_CLIENT_SECRET:}
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
+
 server:
   port: 8080
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        # HTTPS로 배포하면 true로 (SESSION_COOKIE_SECURE=true)
+        secure: ${SESSION_COOKIE_SECURE:false}
 
 management:
   endpoints:
