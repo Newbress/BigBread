@@ -49,13 +49,23 @@ cd frontend && npm install && npm run dev
 | `district` | 구 코드 `DONG` `JUNG` `SEO` `YUSEONG` `DAEDEOK` | 전체 |
 | `lat`, `lng` | 내 위치(함께 지정). 지정하면 응답에 `distanceMeters`가 포함됨 | - |
 | `radius` | 반경(m, 최대 20000). `lat`/`lng` 필요 | 제한 없음 |
-| `sort` | `POPULARITY`(인기순) `DISTANCE`(가까운 순, `lat`/`lng` 필요) `NAME` | `POPULARITY` |
+| `sort` | `POPULARITY`(인기순) `DISTANCE`(가까운 순, `lat`/`lng` 필요) `NAME`(가나다순). 아래 동점 처리 참고 | `POPULARITY` |
 | `page`, `size` | 페이지(0부터), 크기(1~50) | 0, 20 |
 
 ```bash
 curl "localhost:8080/api/bakeries?district=YUSEONG"
 curl "localhost:8080/api/bakeries?lat=36.3283&lng=127.4280&radius=1500&sort=DISTANCE"
 ```
+
+정렬 기준이 같을 때는 2차·3차 기준으로 순서를 고정한다 (마지막은 항상 `id`).
+
+| 정렬 | 1차 | 2차 | 3차 |
+|---|---|---|---|
+| `POPULARITY` | 인기 점수 높은 순 | 가까운 순 (위치가 있을 때) | 이름순 |
+| `DISTANCE` | 거리 (10m 단위로 묶음) | 인기 점수 높은 순 | 이름순 |
+| `NAME` | 가나다순 | 인기 점수 높은 순 | - |
+
+이름순은 DB 기본 정렬 규칙에 기대지 않고 코드포인트 순(`COLLATE "C"`)으로 고정했다. 한글 완성형은 이 순서가 곧 가나다순이고, 영문은 대소문자를 무시한다.
 
 잘못된 요청은 400, 없거나 숨김 처리된 빵집은 404를 [ProblemDetail](https://www.rfc-editor.org/rfc/rfc9457) 형식으로 반환한다.
 
@@ -65,14 +75,14 @@ curl "localhost:8080/api/bakeries?lat=36.3283&lng=127.4280&radius=1500&sort=DIST
 |---|---|
 | `bakeryIds` | 방문할 빵집 ID (1~10개, 중복 불가) |
 | `start` | 출발 위치 `{lat, lng}` (선택). 없으면 첫 빵집이 출발점 |
-| `order` | `NEAREST`(기본, 출발지 기준 **최단 동선**) / `POPULARITY`(인기순) / `MANUAL`(요청 순서 그대로) |
+| `order` | `NEAREST`(기본, 출발지 기준 **최단 동선**) / `POPULARITY`(인기순, 화면에서는 쓰지 않음) / `MANUAL`(요청 순서 그대로) |
 
 ```bash
 curl -X POST localhost:8080/api/routes -H 'Content-Type: application/json' \
   -d '{"bakeryIds":[1,2,3],"start":{"lat":36.3283,"lng":127.4280},"order":"NEAREST"}'
 ```
 
-응답에는 방문 순서대로 `stops[]`(빵집 요약 + 직전 지점에서의 `leg`: 거리 m, 소요 분, `kakaoWalkUrl`), 총 거리·시간,
+응답에는 방문 순서대로 `stops[]`(빵집 요약 + 직전 지점에서의 `leg`: 거리 m, 소요 분, `kakaoWalkUrl`, 구간 경로 `path`, 직선 추정 여부 `estimated`), 총 거리·시간,
 지도에 그릴 `path[]` 좌표가 들어간다.
 
 - `NEAREST`는 Held-Karp 동적 계획법으로 구한 **정확한 최단 경로**다 (출발지로 돌아오지 않는 열린 경로, 최대 10곳).
@@ -109,6 +119,18 @@ cd frontend && npm install && npm run dev      # http://localhost:5173
 - `.env`를 고친 뒤에는 `npm run dev`를 다시 시작해야 반영된다.
 - 지도가 안 뜨면 화면의 안내 문구를 확인한다: 키 없음 / 도메인 미등록 / 카카오맵 사용 설정 OFF가 흔한 원인이다.
 - 내 위치(Geolocation)는 HTTPS 또는 `localhost`에서만 동작한다.
+
+### 도보 동선 화면
+
+1. 목록이나 상세에서 **담기**를 눌러 빵집을 담는다 (최대 10곳, 담으면 **담음**으로 바뀐다). 사이드 패널 위쪽 **내 동선 (n)** 탭에서 확인한다.
+2. 방문 순서(최단 동선 / 인기순 / 담은 순서)를 고르고 **동선 만들기**를 누른다. **내 위치**를 켜 두면 내 위치에서 출발한다.
+3. 결과: 방문 순서와 번호, 구간별 거리·도보 시간, 구간별 **카카오맵 길찾기** 링크, 총 거리·시간. 지도에는 번호 마커와 경로선이 그려진다.
+   - N번 빵집의 마커, 그곳으로 가는 선, 목록의 번호 배지는 같은 색이다 (1번 갈색, 2번 초록, …). 선이 겹쳐도 어느 쪽이 먼저인지 알 수 있다.
+   - 출발 위치에는 **출발** 깃발이 뜨고, 지도 우측 상단의 **동선 전체 보기** / **내 위치로** 버튼으로 시점을 되돌릴 수 있다.
+   - 방문 순서는 **최단 동선**과 **담은 순서** 중에서 고른다.
+   - 도보 시간은 카카오맵 도보 경로 기준이며 빵집에서 머무는 시간은 포함하지 않는다.
+   - 실제 길을 따라가는 선은 **실선**, 길찾기에 실패해 직선으로 추정한 구간이 섞이면 **점선**과 "일부 직선 기준" 표시가 나온다.
+   - 담은 빵집·순서·출발지가 바뀌면 이전 결과는 숨겨지고, 다시 만들어야 한다.
 
 ## 테스트
 

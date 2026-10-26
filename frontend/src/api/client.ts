@@ -1,4 +1,11 @@
-import type { BakeryDetail, BakerySummary, District, PageResponse } from './types.ts'
+import type {
+  BakeryDetail,
+  BakerySummary,
+  District,
+  PageResponse,
+  RouteRequest,
+  RouteResponse,
+} from './types.ts'
 
 export class ApiError extends Error {
   status: number
@@ -10,8 +17,8 @@ export class ApiError extends Error {
   }
 }
 
-async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(url, { signal, headers: { Accept: 'application/json' } })
+async function requestJson<T>(url: string, init: RequestInit): Promise<T> {
+  const res = await fetch(url, init)
   if (!res.ok) {
     // 백엔드는 ProblemDetail({ detail }) 형식으로 에러를 준다.
     let message = `요청에 실패했어요 (HTTP ${res.status})`
@@ -26,6 +33,10 @@ async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   return (await res.json()) as T
 }
 
+function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  return requestJson<T>(url, { signal, headers: { Accept: 'application/json' } })
+}
+
 export function fetchDistricts(signal?: AbortSignal): Promise<District[]> {
   return getJson<District[]>('/api/districts', signal)
 }
@@ -37,4 +48,18 @@ export function fetchBakeries(query: string, signal?: AbortSignal): Promise<Page
 
 export function fetchBakery(id: number, signal?: AbortSignal): Promise<BakeryDetail> {
   return getJson<BakeryDetail>(`/api/bakeries/${id}`, signal)
+}
+
+export function planRoute(request: RouteRequest, signal?: AbortSignal): Promise<RouteResponse> {
+  const body = {
+    bakeryIds: request.bakeryIds,
+    order: request.order,
+    ...(request.start ? { start: request.start } : {}),
+  }
+  return requestJson<RouteResponse>('/api/routes', {
+    method: 'POST',
+    signal,
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
 }

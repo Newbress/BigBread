@@ -463,3 +463,151 @@
     0 0 0 6px rgba(29, 78, 216, 0.25),
     var(--shadow);
 }
+
+/* ── 동선 ───────────────────────────────────────────── */
+.btn--small {
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.list__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.list__row .card {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.basket {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.basket__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.route {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route__total {
+  margin-top: 16px;
+  font-size: 1.05rem;
+}
+
+.route__leg {
+  margin: 2px 0 6px 12px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.badge--warn {
+  margin-left: 8px;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* 동선: 정류장 번호별 색 (N번 마커 = 그곳으로 가는 선 = 카드의 번호 배지) */
+.pin__num {
+  background: var(--pin-color, #b45309);
+}
+
+.pin--selected .pin__num {
+  background: var(--pin-color, #7c2d12);
+  box-shadow:
+    0 0 0 4px rgba(124, 45, 18, 0.35),
+    var(--shadow);
+}
+
+.route__stop {
+  --route-color: var(--accent);
+}
+
+.route__stop .card__rank {
+  background: var(--route-color);
+  color: #fff;
+}
+
+.route__leg {
+  padding-left: 8px;
+  border-left: 4px solid var(--route-color);
+}
+
+.start-flag {
+  padding: 3px 10px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+}
+
+.map__controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+}
+
+.map__controls .btn {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+/* 사이드 패널 탭: 빵집 목록 / 내 동선 */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+
+.tabs__tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent-strong);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabs__tab[aria-current='page'] {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-weight: 800;
+}
+
+/* 담기/담음 토글: 상태가 바뀌어도 버튼 폭이 변하지 않게 한다. */
+.btn--toggle {
+  min-width: 4.2em;
+  text-align: center;
+}
