@@ -463,3 +463,78 @@
     0 0 0 6px rgba(29, 78, 216, 0.25),
     var(--shadow);
 }
+
+/* ── 로그인 ─────────────────────────────────────────── */
+.auth {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.auth__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.auth__name {
+  max-width: 10em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.auth__popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.login-btn {
+  display: block;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.login-btn--kakao {
+  background: #fee500;
+  color: #191919;
+}
+
+.login-btn--naver {
+  background: #03c75a;
+  color: #fff;
+}
+
+.login-btn--google {
+  border-color: #dadce0;
+  background: #fff;
+  color: #3c4043;
+}
+
+.app__banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  border-radius: 0;
+}

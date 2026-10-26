@@ -12,6 +12,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:8080',
+      // 소셜 로그인: 시작 주소와 제공자가 돌려보내는 콜백 주소도 백엔드로 보낸다 (세션 쿠키를 한 주소로 유지).
+      '/oauth2': 'http://localhost:8080',
+      '/login/oauth2': 'http://localhost:8080',
     },
   },
 })

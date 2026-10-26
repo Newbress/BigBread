@@ -39,6 +39,9 @@ cd frontend && npm install && npm run dev
 |---|---|---|
 | GET | `/api/districts` | 대전 5개 구 목록 |
 | GET | `/api/bakeries` | 빵집 목록 (구 필터, 반경 검색, 정렬, 페이지네이션) |
+| GET | `/api/auth/providers` | 로그인 가능한 소셜 제공자 (키가 설정된 것만) |
+| GET | `/api/me` | 로그인 상태와 내 정보 (비로그인이면 `authenticated: false`) |
+| POST | `/api/logout` | 로그아웃 (CSRF 토큰 필요) |
 | GET | `/api/bakeries/{id}` | 빵집 상세 (대표 빵, 원본 게시물 링크, 영업시간, 인스타·카카오맵 링크) |
 | POST | `/api/routes` | 선택한 빵집들의 도보 동선 (방문 순서, 구간별 거리·시간, 카카오맵 길찾기 링크) |
 
@@ -109,6 +112,36 @@ cd frontend && npm install && npm run dev      # http://localhost:5173
 - `.env`를 고친 뒤에는 `npm run dev`를 다시 시작해야 반영된다.
 - 지도가 안 뜨면 화면의 안내 문구를 확인한다: 키 없음 / 도메인 미등록 / 카카오맵 사용 설정 OFF가 흔한 원인이다.
 - 내 위치(Geolocation)는 HTTPS 또는 `localhost`에서만 동작한다.
+
+## 소셜 로그인 (카카오 · 네이버 · 구글)
+
+서버 세션(HttpOnly 쿠키) 방식의 OAuth2 인가 코드 흐름이다. 키가 설정된 제공자만 켜지고, 하나도 없으면 로그인 버튼이 나오지 않는다(지도와 목록은 그대로 동작).
+
+### 설정
+`.env`에 제공자별 키를 넣는다 (`.env.example` 참고). 키 값은 커밋하지 않는다.
+
+| 제공자 | 환경 변수 | 콘솔에서 할 일 (화면 구성은 바뀔 수 있다) |
+|---|---|---|
+| 카카오 | `KAKAO_REST_API_KEY`(클라이언트 ID), `KAKAO_CLIENT_SECRET` | 앱 → **카카오 로그인** 사용 설정 ON → Redirect URI 등록 → 동의항목에서 **닉네임, 프로필 사진** 설정. 보안에서 Client Secret을 켰다면 그 값을 `KAKAO_CLIENT_SECRET`에 |
+| 네이버 | `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` | 애플리케이션 등록 → 사용 API **네이버 로그인**, 제공 정보(별명, 프로필 사진 등) 선택 → 서비스 URL과 Callback URL 등록. 개발 중 상태에서는 **멤버 관리**에 넣은 계정만 로그인할 수 있다 |
+| 구글 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Cloud Console → OAuth 동의 화면(테스트 사용자 추가) → **OAuth 클라이언트 ID(웹 애플리케이션)** 생성 → 승인된 리디렉션 URI 등록 |
+
+콘솔에 등록하는 **리다이렉트 URI**는 `APP_BASE_URL`(개발: `http://localhost:5173`) 뒤에 아래를 붙인 값이다. 프론트 개발 서버가 `/oauth2`, `/login/oauth2`를 백엔드로 넘겨 주므로 항상 5173 주소로 등록한다.
+
+```
+http://localhost:5173/login/oauth2/code/kakao
+http://localhost:5173/login/oauth2/code/naver
+http://localhost:5173/login/oauth2/code/google
+```
+
+배포할 때는 `APP_BASE_URL`을 운영 도메인으로, `SESSION_COOKIE_SECURE=true`로 바꾸고 콘솔의 리다이렉트 URI도 운영 도메인 것으로 추가한다.
+
+### 동작 방식
+- 로그인 시작: 브라우저가 `/oauth2/authorization/{kakao|naver|google}`로 이동 → 제공자 로그인 → `/login/oauth2/code/{id}` 콜백 → 서비스 사용자(`app_user`)를 찾거나 새로 만들고 세션 시작 → `/`로 돌아온다. 실패하면 `/?login=error`로 돌아온다.
+- 같은 이메일이어도 **제공자가 다르면 다른 계정**으로 본다 (제공자가 준 이메일을 믿고 자동으로 합치면 계정 탈취에 쓰일 수 있어서).
+- 세션에는 사용자 ID와 역할만 저장한다. 제공자의 토큰과 원본 응답은 보관하지 않는다.
+- 조회 API는 모두 공개이고, 로그인이 필요한 API는 `/api/my/**` 아래에 둔다 (비로그인이면 401).
+- 변경 요청(POST/PUT/DELETE)은 CSRF 토큰이 필요하다: 쿠키 `XSRF-TOKEN` 값을 헤더 `X-XSRF-TOKEN`으로 보낸다. `POST /api/routes`는 저장 없는 계산이라 제외된다.
 
 ## 테스트
 
