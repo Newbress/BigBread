@@ -64,6 +64,22 @@ export type SearchParams = {
   size?: number
 }
 
+export type AuthProvider = {
+  id: string
+  name: string
+  /** 브라우저가 이동할 로그인 시작 주소 */
+  loginUrl: string
+}
+
+export type User = {
+  id: number
+  nickname: string
+  email: string | null
+  profileImageUrl: string | null
+  role: 'USER' | 'ADMIN'
+}
+
+export type Me = { authenticated: boolean; user: User | null }
 export type RouteOrder = 'NEAREST' | 'POPULARITY' | 'MANUAL'
 
 export type RouteLeg = {

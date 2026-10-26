@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import './App.css'
 import type { BakerySort, SearchParams } from './api/types.ts'
+import AuthMenu from './components/AuthMenu.tsx'
 import BakeryDetailPanel from './components/BakeryDetailPanel.tsx'
 import BakeryList from './components/BakeryList.tsx'
 import FilterBar from './components/FilterBar.tsx'
@@ -8,6 +9,7 @@ import KakaoMap from './components/KakaoMap.tsx'
 import RoutePanel from './components/RoutePanel.tsx'
 import { KAKAO_JS_KEY } from './config.ts'
 import { useBakeries } from './hooks/useBakeries.ts'
+import { useAuth } from './hooks/useAuth.ts'
 import { useDistricts } from './hooks/useDistricts.ts'
 import { useGeolocation } from './hooks/useGeolocation.ts'
 import { useRoute } from './hooks/useRoute.ts'
@@ -18,6 +20,9 @@ const DEFAULT_RADIUS = 3000
 export default function App() {
   const { districts, error: districtError } = useDistricts()
   const geo = useGeolocation()
+  const auth = useAuth()
+  // 소셜 로그인이 실패해 돌아오면 주소에 ?login=error가 붙는다.
+  const [loginFailed, setLoginFailed] = useState(() => new URLSearchParams(window.location.search).get('login') === 'error')
 
   const [district, setDistrict] = useState<string | null>(null)
   const [sort, setSort] = useState<BakerySort>('POPULARITY')
@@ -82,7 +87,29 @@ export default function App() {
           대빵 <span aria-hidden="true">🥖</span>
         </h1>
         <p>대전 빵집 지도</p>
+        <AuthMenu
+          loading={auth.loading}
+          providers={auth.providers}
+          user={auth.user}
+          error={auth.error}
+          onLogout={auth.logout}
+        />
       </header>
+      {loginFailed && (
+        <p className="notice notice--error app__banner" role="alert">
+          로그인에 실패했어요. 잠시 후 다시 시도해 주세요.{' '}
+          <button
+            type="button"
+            className="btn btn--small"
+            onClick={() => {
+              setLoginFailed(false)
+              window.history.replaceState(null, '', window.location.pathname)
+            }}
+          >
+            닫기
+          </button>
+        </p>
+      )}
 
       <main className="app__main">
         <aside className="app__side">

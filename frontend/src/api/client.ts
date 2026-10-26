@@ -1,7 +1,10 @@
+import { readCookie } from '../lib/cookie.ts'
 import type {
+  AuthProvider,
   BakeryDetail,
   BakerySummary,
   District,
+  Me,
   PageResponse,
   RouteRequest,
   RouteResponse,
@@ -48,6 +51,24 @@ export function fetchBakeries(query: string, signal?: AbortSignal): Promise<Page
 
 export function fetchBakery(id: number, signal?: AbortSignal): Promise<BakeryDetail> {
   return getJson<BakeryDetail>(`/api/bakeries/${id}`, signal)
+}
+
+export function fetchProviders(signal?: AbortSignal): Promise<AuthProvider[]> {
+  return getJson<AuthProvider[]>('/api/auth/providers', signal)
+}
+
+export function fetchMe(signal?: AbortSignal): Promise<Me> {
+  return getJson<Me>('/api/me', signal)
+}
+
+/** 변경 요청은 CSRF 토큰(쿠키 XSRF-TOKEN)을 X-XSRF-TOKEN 헤더로 돌려보내야 한다. */
+export async function logout(): Promise<void> {
+  const token = readCookie('XSRF-TOKEN')
+  const res = await fetch('/api/logout', {
+    method: 'POST',
+    headers: token ? { 'X-XSRF-TOKEN': token } : {},
+  })
+  if (!res.ok) throw new ApiError(res.status, '로그아웃에 실패했어요.')
 }
 
 export function planRoute(request: RouteRequest, signal?: AbortSignal): Promise<RouteResponse> {
