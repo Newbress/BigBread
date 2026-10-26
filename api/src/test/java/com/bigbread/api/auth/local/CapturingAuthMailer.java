@@ -16,6 +16,9 @@ class CapturingAuthMailer implements AuthMailer {
 
     final List<Verification> verifications = new CopyOnWriteArrayList<>();
     final List<String> alreadyRegistered = new CopyOnWriteArrayList<>();
+    final List<Verification> passwordResets = new CopyOnWriteArrayList<>();
+    final List<String[]> loginIds = new CopyOnWriteArrayList<>(); // {email, loginId}
+    final List<String> passwordChanged = new CopyOnWriteArrayList<>();
 
     @Override
     public boolean available() {
@@ -28,6 +31,21 @@ class CapturingAuthMailer implements AuthMailer {
     }
 
     @Override
+    public void sendPasswordReset(String email, String nickname, String link, Duration validFor) {
+        passwordResets.add(new Verification(email, nickname, link, validFor));
+    }
+
+    @Override
+    public void sendLoginId(String email, String loginId) {
+        loginIds.add(new String[] {email, loginId});
+    }
+
+    @Override
+    public void sendPasswordChanged(String email) {
+        passwordChanged.add(email);
+    }
+
+    @Override
     public void sendAlreadyRegistered(String email) {
         alreadyRegistered.add(email);
     }
@@ -37,8 +55,15 @@ class CapturingAuthMailer implements AuthMailer {
         return copy.get(copy.size() - 1);
     }
 
+    Verification lastReset() {
+        return passwordResets.get(passwordResets.size() - 1);
+    }
+
     void clear() {
         verifications.clear();
         alreadyRegistered.clear();
+        passwordResets.clear();
+        loginIds.clear();
+        passwordChanged.clear();
     }
 }

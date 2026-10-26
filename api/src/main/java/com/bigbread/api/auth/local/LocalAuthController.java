@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.time.Duration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -37,16 +38,18 @@ public class LocalAuthController {
     private final LocalAccountService accounts;
     private final UserAccountService users;
     private final AuthProperties properties;
+    private final AuthRateLimits limits;
     private final SessionAuthenticationStrategy sessionStrategy;
     private final SecurityContextRepository securityContextRepository;
     private final SecurityContextHolderStrategy holderStrategy = SecurityContextHolder.getContextHolderStrategy();
 
     public LocalAuthController(LocalAccountService accounts, UserAccountService users, AuthProperties properties,
-                               SessionAuthenticationStrategy sessionStrategy,
+                               AuthRateLimits limits, SessionAuthenticationStrategy sessionStrategy,
                                SecurityContextRepository securityContextRepository) {
         this.accounts = accounts;
         this.users = users;
         this.properties = properties;
+        this.limits = limits;
         this.sessionStrategy = sessionStrategy;
         this.securityContextRepository = securityContextRepository;
     }
@@ -56,7 +59,8 @@ public class LocalAuthController {
 
     /** 가입 화면의 아이디 중복 확인. */
     @GetMapping("/id-available")
-    public IdAvailability idAvailable(@RequestParam String loginId) {
+    public IdAvailability idAvailable(@RequestParam String loginId, HttpServletRequest httpRequest) {
+        limits.checkIp("id-available", httpRequest, 60, Duration.ofMinutes(1));
         String normalized = LocalAuthRules.normalizeLoginId(loginId);
         String error = LocalAuthRules.loginIdError(normalized);
         if (error != null) {
@@ -73,7 +77,8 @@ public class LocalAuthController {
 
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public Message signup(@RequestBody SignupRequest request) {
+    public Message signup(@RequestBody SignupRequest request, HttpServletRequest httpRequest) {
+        limits.checkIp("signup", httpRequest, 10, Duration.ofHours(1));
         String loginId = LocalAuthRules.normalizeLoginId(request.loginId());
         String email = LocalAuthRules.normalizeEmail(request.email());
         firstError(
@@ -93,7 +98,8 @@ public class LocalAuthController {
 
     @PostMapping("/verify-email")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void verifyEmail(@Valid @RequestBody VerifyRequest request) {
+    public void verifyEmail(@Valid @RequestBody VerifyRequest request, HttpServletRequest httpRequest) {
+        limits.checkIp("verify-email", httpRequest, 30, Duration.ofMinutes(10));
         if (accounts.verifySignup(request.token()).isEmpty()) {
             throw ApiException.badRequest(LocalAccountService.INVALID_LINK);
         }
@@ -105,8 +111,16 @@ public class LocalAuthController {
     @PostMapping("/login")
     public AuthController.Me login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest,
                                    HttpServletResponse httpResponse) {
-        long userId = accounts.authenticate(request.loginId(), request.password())
-                .orElseThrow(() -> ApiException.unauthorized(LOGIN_FAILED));
+        limits.checkIp("login", httpRequest, 30, Duration.ofMinutes(5));
+        LocalAccountService.LoginResult result = accounts.authenticate(request.loginId(), request.password());
+        if (result.status() == LocalAccountService.LoginStatus.LOCKED) {
+            throw ApiException.tooManyRequests("로그인 시도가 너무 많아요. "
+                    + LocalAccountService.LOCK_DURATION.toMinutes() + "분 뒤에 다시 시도해 주세요.");
+        }
+        if (result.status() != LocalAccountService.LoginStatus.SUCCESS) {
+            throw ApiException.unauthorized(LOGIN_FAILED);
+        }
+        long userId = result.userId();
         UserView user = users.find(userId).orElseThrow(() -> ApiException.unauthorized(LOGIN_FAILED));
 
         AppUserPrincipal principal = new AppUserPrincipal(user.id(), user.role());

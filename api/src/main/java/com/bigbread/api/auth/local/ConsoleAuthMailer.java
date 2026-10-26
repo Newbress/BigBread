@@ -24,6 +24,21 @@ class ConsoleAuthMailer implements AuthMailer {
     }
 
     @Override
+    public void sendPasswordReset(String email, String nickname, String link, Duration validFor) {
+        log.info("[개발용 메일] 비밀번호 재설정 -> {} ({}님) / {}분 안에 열기: {}", email, nickname, validFor.toMinutes(), link);
+    }
+
+    @Override
+    public void sendLoginId(String email, String loginId) {
+        log.info("[개발용 메일] 아이디 찾기 -> {} / 아이디: {}", email, loginId);
+    }
+
+    @Override
+    public void sendPasswordChanged(String email) {
+        log.info("[개발용 메일] 비밀번호가 변경되었어요 -> {}", email);
+    }
+
+    @Override
     public void sendAlreadyRegistered(String email) {
         log.info("[개발용 메일] 이미 가입된 이메일로 가입 시도 -> {}", email);
     }
