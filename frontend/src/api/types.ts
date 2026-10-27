@@ -117,3 +117,16 @@ export type RouteRequest = {
   start: Coords | null
   order: RouteOrder
 }
+
+/** 메일을 보낼 수 있어서 회원가입·아이디/비밀번호 찾기를 쓸 수 있으면 signupEnabled */
+export type AuthOptions = { signupEnabled: boolean }
+
+export type SignupRequest = {
+  loginId: string
+  email: string
+  password: string
+  nickname: string
+  agreedToTerms: boolean
+}
+
+export type Message = { message: string }

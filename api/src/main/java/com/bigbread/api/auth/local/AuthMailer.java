@@ -15,6 +15,15 @@ public interface AuthMailer {
     /** 가입 인증 메일: 링크를 누르면 가입이 완료된다. */
     void sendSignupVerification(String email, String nickname, String link, Duration validFor);
 
+    /** 비밀번호 재설정 메일: 링크를 누르면 새 비밀번호를 정할 수 있다. */
+    void sendPasswordReset(String email, String nickname, String link, Duration validFor);
+
+    /** 아이디 찾기 메일: 해당 이메일로 가입된 계정의 아이디를 알려준다. */
+    void sendLoginId(String email, String loginId);
+
+    /** 비밀번호가 바뀐 것을 알린다 (본인이 바꾼 게 아니라면 바로 조치할 수 있게). */
+    void sendPasswordChanged(String email);
+
     /** 이미 가입된 이메일로 가입을 시도했을 때, 그 이메일 주인에게만 알린다. (화면 응답으로는 존재 여부를 드러내지 않는다) */
     void sendAlreadyRegistered(String email);
 }

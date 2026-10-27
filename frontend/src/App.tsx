@@ -90,8 +90,10 @@ export default function App() {
         <AuthMenu
           loading={auth.loading}
           providers={auth.providers}
+          options={auth.options}
           user={auth.user}
           error={auth.error}
+          onLogin={auth.login}
           onLogout={auth.logout}
         />
       </header>

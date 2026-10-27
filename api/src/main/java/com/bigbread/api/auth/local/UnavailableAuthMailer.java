@@ -31,6 +31,21 @@ class UnavailableAuthMailer implements AuthMailer {
     }
 
     @Override
+    public void sendPasswordReset(String email, String nickname, String link, Duration validFor) {
+        throw new IllegalStateException("메일 발송 수단이 설정되지 않았습니다.");
+    }
+
+    @Override
+    public void sendLoginId(String email, String loginId) {
+        throw new IllegalStateException("메일 발송 수단이 설정되지 않았습니다.");
+    }
+
+    @Override
+    public void sendPasswordChanged(String email) {
+        throw new IllegalStateException("메일 발송 수단이 설정되지 않았습니다.");
+    }
+
+    @Override
     public void sendAlreadyRegistered(String email) {
         throw new IllegalStateException("메일 발송 수단이 설정되지 않았습니다.");
     }

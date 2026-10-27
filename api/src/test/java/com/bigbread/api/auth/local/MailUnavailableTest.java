@@ -28,6 +28,11 @@ class MailUnavailableTest {
     JdbcTemplate jdbc;
 
     @Test
+    void 메일_수단이_없으면_가입_기능이_꺼진_것으로_알려준다() throws Exception {
+        mvc.perform(get("/api/auth/options")).andExpect(status().isOk()).andExpect(jsonPath("$.signupEnabled").value(false));
+    }
+
+    @Test
     void 메일_수단이_없으면_가입은_503이고_대기_목록에도_남지_않는다() throws Exception {
         Cookie xsrf = mvc.perform(get("/api/me")).andReturn().getResponse().getCookie("XSRF-TOKEN");
 

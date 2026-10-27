@@ -22,6 +22,11 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  session:
+    # 테이블은 Flyway(V3)가 만든다
+    jdbc:
+      initialize-schema: never
+    timeout: ${SESSION_TIMEOUT:7d}
 
 bigbread:
   kakao:
@@ -44,11 +49,16 @@ bigbread:
 
 server:
   port: 8080
+  # 프록시(Nginx, AWS ALB 등) 뒤에서 돌릴 때는 framework로 바꿔야 원래 접속자 IP가 요청 제한에 쓰인다.
+  # (켜지 않은 채 프록시 뒤에 두면 모두가 프록시 주소 하나로 집계된다. 프록시 없이 켜면 IP를 속일 수 있으니 주의)
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
   servlet:
     session:
       cookie:
         http-only: true
         same-site: lax
+        # 브라우저를 닫아도 로그인이 유지되는 기간 (세션 만료 시간과 같게)
+        max-age: ${SESSION_TIMEOUT:7d}
         # HTTPS로 배포하면 true로 (SESSION_COOKIE_SECURE=true)
         secure: ${SESSION_COOKIE_SECURE:false}
 

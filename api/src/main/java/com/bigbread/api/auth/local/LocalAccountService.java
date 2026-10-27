@@ -144,29 +144,49 @@ public class LocalAccountService {
         return Optional.of(userId);
     }
 
+    /** 연속으로 틀릴 수 있는 횟수. 넘으면 {@link #LOCK_DURATION} 동안 로그인할 수 없다. */
+    public static final int MAX_FAILED_ATTEMPTS = 5;
+    public static final Duration LOCK_DURATION = Duration.ofMinutes(15);
+
+    public enum LoginStatus { SUCCESS, FAILED, LOCKED }
+
+    public record LoginResult(LoginStatus status, long userId) {
+        static LoginResult failed() {
+            return new LoginResult(LoginStatus.FAILED, 0);
+        }
+    }
+
     /**
-     * 아이디와 비밀번호를 확인한다. 어느 쪽이 틀렸는지는 구분하지 않는다.
+     * 아이디와 비밀번호를 확인한다. 아이디가 없는 경우와 비밀번호가 틀린 경우를 구분하지 않는다.
      *
-     * @return 맞으면 사용자 ID
+     * <p>연속 {@value #MAX_FAILED_ATTEMPTS}번 틀리면 계정을 15분 동안 잠근다. 잠긴 동안에는 비밀번호가 맞아도
+     * 거부한다 (공격자가 계속 시도하다 맞히는 것을 막는다). 성공하면 실패 횟수를 지운다.
      */
     @Transactional
-    public Optional<Long> authenticate(String loginIdInput, String password) {
+    public LoginResult authenticate(String loginIdInput, String password) {
         String loginId = LocalAuthRules.normalizeLoginId(loginIdInput);
         if (loginId == null || password == null || password.length() > LocalAuthRules.PASSWORD_MAX) {
             encoder.matches("x", dummyHash);
-            return Optional.empty();
+            return LoginResult.failed();
         }
-        Optional<Credential> credential = jdbc.sql("SELECT user_id, password_hash FROM local_credential WHERE login_id = :id")
+        Optional<Credential> credential = jdbc.sql("""
+                        SELECT user_id, password_hash, (locked_until IS NOT NULL AND locked_until > now()) AS locked
+                        FROM local_credential WHERE login_id = :id
+                        """)
                 .param("id", loginId)
-                .query((rs, n) -> new Credential(rs.getLong("user_id"), rs.getString("password_hash")))
+                .query((rs, n) -> new Credential(rs.getLong("user_id"), rs.getString("password_hash"), rs.getBoolean("locked")))
                 .optional();
         if (credential.isEmpty()) {
             encoder.matches(password, dummyHash);
-            return Optional.empty();
+            return LoginResult.failed();
         }
         Credential c = credential.get();
+        if (c.locked()) {
+            return new LoginResult(LoginStatus.LOCKED, c.userId());
+        }
         if (!encoder.matches(password, c.passwordHash())) {
-            return Optional.empty();
+            recordFailure(c.userId());
+            return LoginResult.failed();
         }
         if (encoder.upgradeEncoding(c.passwordHash())) {
             jdbc.sql("UPDATE local_credential SET password_hash = :hash, updated_at = now() WHERE user_id = :id")
@@ -174,7 +194,29 @@ public class LocalAccountService {
                     .param("id", c.userId())
                     .update();
         }
-        return Optional.of(c.userId());
+        jdbc.sql("""
+                        UPDATE local_credential SET failed_attempts = 0, locked_until = NULL
+                        WHERE user_id = :id AND (failed_attempts <> 0 OR locked_until IS NOT NULL)
+                        """)
+                .param("id", c.userId())
+                .update();
+        return new LoginResult(LoginStatus.SUCCESS, c.userId());
+    }
+
+    /** 실패 횟수를 1 올리고, 한도에 닿으면 잠근다. 한 문장으로 처리해 동시에 여러 번 시도해도 정확히 센다. */
+    private void recordFailure(long userId) {
+        jdbc.sql("""
+                        UPDATE local_credential SET
+                            locked_until = CASE WHEN failed_attempts + 1 >= :max
+                                                THEN now() + make_interval(secs => :lockSeconds) ELSE locked_until END,
+                            failed_attempts = CASE WHEN failed_attempts + 1 >= :max THEN 0 ELSE failed_attempts + 1 END,
+                            updated_at = now()
+                        WHERE user_id = :id
+                        """)
+                .param("max", MAX_FAILED_ATTEMPTS)
+                .param("lockSeconds", LOCK_DURATION.toSeconds())
+                .param("id", userId)
+                .update();
     }
 
     public boolean loginIdTaken(String loginId) {
@@ -191,6 +233,6 @@ public class LocalAccountService {
                            OffsetDateTime termsAgreedAt) {
     }
 
-    private record Credential(long userId, String passwordHash) {
+    private record Credential(long userId, String passwordHash, boolean locked) {
     }
 }

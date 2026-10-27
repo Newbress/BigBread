@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.mock.web.MockHttpSession;
+import com.bigbread.api.auth.CookieSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -52,12 +52,21 @@ class LocalAuthApiTest {
     @Autowired
     JdbcTemplate jdbc;
 
+    @Autowired
+    AuthRateLimits limits;
+
     private Cookie xsrf;
 
     @BeforeEach
     void setUp() throws Exception {
         mailer.clear();
+        limits.reset(); // 한 클래스에서 같은 IP로 가입을 많이 하므로 요청 제한 기록을 비운다
         xsrf = mvc.perform(get("/api/me")).andReturn().getResponse().getCookie("XSRF-TOKEN");
+    }
+
+    @Test
+    void 메일을_보낼_수_있으면_가입_기능이_켜진_것으로_알려준다() throws Exception {
+        mvc.perform(get("/api/auth/options")).andExpect(status().isOk()).andExpect(jsonPath("$.signupEnabled").value(true));
     }
 
     @Test
@@ -76,21 +85,25 @@ class LocalAuthApiTest {
         verify(mail.token()).andExpect(status().isNoContent());
 
         // 아이디는 대소문자를 구분하지 않는다.
-        MockHttpSession session = new MockHttpSession();
-        String before = session.getId();
-        login("BREADFAN", PASSWORD, session)
+        CookieSession browser = new CookieSession(xsrf);
+        browser.perform(mvc, get("/api/me")); // 로그인 전에 이미 받은 세션이 있어도
+        String before = browser.value("SESSION");
+        login("BREADFAN", PASSWORD, browser)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.authenticated").value(true))
                 .andExpect(jsonPath("$.user.nickname").value("빵순이"))
                 .andExpect(jsonPath("$.user.email").value("fan@example.com"));
-        assertThat(session.getId()).as("로그인하면 세션 ID가 새로 발급된다").isNotEqualTo(before);
+        assertThat(browser.value("SESSION")).as("로그인하면 세션 ID가 새로 발급된다").isNotNull();
+        if (before != null) {
+            assertThat(browser.value("SESSION")).isNotEqualTo(before);
+        }
 
-        mvc.perform(get("/api/me").session(session))
+        browser.perform(mvc, get("/api/me"))
                 .andExpect(jsonPath("$.authenticated").value(true))
                 .andExpect(jsonPath("$.user.nickname").value("빵순이"));
 
-        mvc.perform(withCsrf(post("/api/logout")).session(session)).andExpect(status().isNoContent());
-        mvc.perform(get("/api/me").session(session)).andExpect(jsonPath("$.authenticated").value(false));
+        browser.perform(mvc, browser.withCsrf(post("/api/logout"))).andExpect(status().isNoContent());
+        browser.perform(mvc, get("/api/me")).andExpect(jsonPath("$.authenticated").value(false));
     }
 
     @Test
@@ -247,11 +260,11 @@ class LocalAuthApiTest {
     }
 
     private ResultActions login(String loginId, String password) throws Exception {
-        return login(loginId, password, new MockHttpSession());
+        return login(loginId, password, new CookieSession(xsrf));
     }
 
-    private ResultActions login(String loginId, String password, MockHttpSession session) throws Exception {
-        return mvc.perform(withCsrf(post("/api/auth/login")).session(session).contentType(MediaType.APPLICATION_JSON)
+    private ResultActions login(String loginId, String password, CookieSession browser) throws Exception {
+        return browser.perform(mvc, browser.withCsrf(post("/api/auth/login")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"loginId\":\"" + loginId + "\",\"password\":\"" + password + "\"}"));
     }
 }
