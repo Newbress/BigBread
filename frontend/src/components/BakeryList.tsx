@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { BakerySummary } from '../api/types.ts'
 import { formatDistance } from '../lib/format.ts'
+import FavoriteButton from './FavoriteButton.tsx'
 
 type Props = {
   items: BakerySummary[]
@@ -13,6 +14,8 @@ type Props = {
   basketIds: ReadonlySet<number>
   basketFull: boolean
   onToggleBasket: (bakery: BakerySummary) => void
+  favoriteIds: ReadonlySet<number>
+  onToggleFavorite: (bakery: BakerySummary) => void
 }
 
 type ItemProps = {
@@ -23,9 +26,22 @@ type ItemProps = {
   inBasket: boolean
   basketFull: boolean
   onToggleBasket: (bakery: BakerySummary) => void
+  isFavorite: boolean
+  onToggleFavorite: (bakery: BakerySummary) => void
 }
 
-function Item({ bakery, rank, selected, onSelect, inBasket, basketFull, onToggleBasket }: ItemProps) {
+/** 빵집 한 줄: 카드(눌러서 상세) + 동선에 담기 + 즐겨찾기. 즐겨찾기 탭에서도 같이 쓴다. */
+export function BakeryListItem({
+  bakery,
+  rank,
+  selected,
+  onSelect,
+  inBasket,
+  basketFull,
+  onToggleBasket,
+  isFavorite,
+  onToggleFavorite,
+}: ItemProps) {
   const ref = useRef<HTMLLIElement>(null)
 
   useEffect(() => {
@@ -65,16 +81,19 @@ function Item({ bakery, rank, selected, onSelect, inBasket, basketFull, onToggle
           )}
         </span>
       </button>
-      <button
-        type="button"
-        className={inBasket ? 'btn btn--small btn--toggle btn--on' : 'btn btn--small btn--toggle'}
-        disabled={!inBasket && basketFull}
-        title={!inBasket && basketFull ? '동선에는 최대 10곳까지 담을 수 있어요' : undefined}
-        aria-label={`${inBasket ? '담음' : '담기'}: ${bakery.name}`}
-        onClick={() => onToggleBasket(bakery)}
-      >
-        {inBasket ? '담음' : '담기'}
-      </button>
+      <div className="list__actions">
+        <button
+          type="button"
+          className={inBasket ? 'btn btn--small btn--toggle btn--on' : 'btn btn--small btn--toggle'}
+          disabled={!inBasket && basketFull}
+          title={!inBasket && basketFull ? '동선에는 최대 10곳까지 담을 수 있어요' : undefined}
+          aria-label={`${inBasket ? '담음' : '담기'}: ${bakery.name}`}
+          onClick={() => onToggleBasket(bakery)}
+        >
+          {inBasket ? '담음' : '담기'}
+        </button>
+        <FavoriteButton active={isFavorite} name={bakery.name} onToggle={() => onToggleFavorite(bakery)} />
+      </div>
     </li>
   )
 }
@@ -90,6 +109,8 @@ export default function BakeryList({
   basketIds,
   basketFull,
   onToggleBasket,
+  favoriteIds,
+  onToggleFavorite,
 }: Props) {
   return (
     <section aria-label="빵집 목록" aria-busy={loading}>
@@ -113,7 +134,7 @@ export default function BakeryList({
 
       <ol className="list">
         {items.map((bakery, index) => (
-          <Item
+          <BakeryListItem
             key={bakery.id}
             bakery={bakery}
             rank={index + 1}
@@ -122,6 +143,8 @@ export default function BakeryList({
             inBasket={basketIds.has(bakery.id)}
             basketFull={basketFull}
             onToggleBasket={onToggleBasket}
+            isFavorite={favoriteIds.has(bakery.id)}
+            onToggleFavorite={onToggleFavorite}
           />
         ))}
       </ol>

@@ -1,21 +1,30 @@
 import { useMemo, useState } from 'react'
 import './App.css'
-import type { BakerySort, SearchParams } from './api/types.ts'
+import type { BakerySort, BakerySummary, RouteResponse, SearchParams } from './api/types.ts'
 import AuthMenu from './components/AuthMenu.tsx'
 import BakeryDetailPanel from './components/BakeryDetailPanel.tsx'
 import BakeryList from './components/BakeryList.tsx'
+import CoursesPanel from './components/CoursesPanel.tsx'
+import FavoritesPanel from './components/FavoritesPanel.tsx'
 import FilterBar from './components/FilterBar.tsx'
 import KakaoMap from './components/KakaoMap.tsx'
 import RoutePanel from './components/RoutePanel.tsx'
 import { KAKAO_JS_KEY } from './config.ts'
 import { useBakeries } from './hooks/useBakeries.ts'
 import { useAuth } from './hooks/useAuth.ts'
+import { useCourses } from './hooks/useCourses.ts'
+import { useFavorites } from './hooks/useFavorites.ts'
 import { useDistricts } from './hooks/useDistricts.ts'
 import { useGeolocation } from './hooks/useGeolocation.ts'
 import { useRoute } from './hooks/useRoute.ts'
+import { wantsLoginOnLoad } from './lib/loginParam.ts'
 import { routeColor } from './lib/route.ts'
 
 const DEFAULT_RADIUS = 3000
+
+type View = 'list' | 'detail' | 'route' | 'favorites' | 'courses'
+/** 상세에서 '뒤로'를 눌렀을 때 돌아갈 화면 (= 상세가 열려 있는 탭) */
+type TabView = Exclude<View, 'detail'>
 
 export default function App() {
   const { districts, error: districtError } = useDistricts()
@@ -28,9 +37,9 @@ export default function App() {
   const [sort, setSort] = useState<BakerySort>('POPULARITY')
   const [radius, setRadius] = useState<number | null>(DEFAULT_RADIUS)
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [view, setView] = useState<'list' | 'detail' | 'route'>('list')
-  // 상세에서 '뒤로'를 눌렀을 때 돌아갈 화면
-  const [returnView, setReturnView] = useState<'list' | 'route'>('list')
+  const [view, setView] = useState<View>('list')
+  const [returnView, setReturnView] = useState<TabView>('list')
+  const [loginOpen, setLoginOpen] = useState(wantsLoginOnLoad)
 
   const params = useMemo<SearchParams>(
     () => ({ district, location: geo.location, radius: geo.location ? radius : null, sort }),
@@ -39,20 +48,50 @@ export default function App() {
   const { data, loading, error } = useBakeries(params)
   const items = useMemo(() => data?.items ?? [], [data])
   const route = useRoute(geo.location)
+  const favorites = useFavorites(auth.user)
+  const courses = useCourses(auth.user)
   const basketIds = useMemo(() => new Set(route.basket.map((bakery) => bakery.id)), [route.basket])
 
   // 필터가 바뀌어 결과에서 사라진 빵집은 선택을 풀어 준다.
   const activeId = selectedId !== null && items.some((bakery) => bakery.id === selectedId) ? selectedId : null
 
-  // 상세는 목록에 없어도 동선에 담긴 빵집이면 열 수 있다.
-  const detailId = selectedId !== null && (activeId !== null || basketIds.has(selectedId)) ? selectedId : null
-  const detailSummary = detailId === null ? undefined : (items.find((b) => b.id === detailId) ?? route.basket.find((b) => b.id === detailId))
+  // 상세는 목록에 없어도 동선에 담았거나 즐겨찾기한 빵집이면 열 수 있다.
+  const detailId =
+    selectedId !== null && (activeId !== null || basketIds.has(selectedId) || favorites.ids.has(selectedId))
+      ? selectedId
+      : null
+  const detailSummary =
+    detailId === null
+      ? undefined
+      : (items.find((b) => b.id === detailId) ??
+        route.basket.find((b) => b.id === detailId) ??
+        favorites.items.find((item) => item.bakery.id === detailId)?.bakery)
 
-  // 상세는 들어온 화면(목록/동선)의 탭 아래에 열린다.
-  const tab: 'list' | 'route' = view === 'route' || (view === 'detail' && returnView === 'route') ? 'route' : 'list'
+  // 상세는 들어온 화면의 탭 아래에 열린다.
+  const tab: TabView = view === 'detail' ? returnView : view
+
+  const requireLogin = () => {
+    if (auth.user) return true
+    setLoginOpen(true)
+    return false
+  }
+  const toggleFavorite = (bakery: BakerySummary) => {
+    if (requireLogin()) void favorites.toggle(bakery)
+  }
+  const favoriteBakeries = useMemo(() => favorites.items.map((item) => item.bakery), [favorites.items])
+  const saveCourse = (title: string, result: RouteResponse) =>
+    courses.save(title, result.order, result.stops.map((stop) => stop.bakery.id))
+  const loadCourse = async (id: number) => {
+    route.replaceBasket(await courses.loadStops(id))
+    setView('route')
+  }
 
   const routeResult = view === 'route' ? route.route : null
-  const mapBakeries = useMemo(() => (routeResult ? routeResult.stops.map((stop) => stop.bakery) : items), [routeResult, items])
+  const mapBakeries = useMemo(
+    () => (routeResult ? routeResult.stops.map((stop) => stop.bakery) : tab === 'favorites' ? favoriteBakeries : items),
+    [routeResult, tab, favoriteBakeries, items],
+  )
+  const mapSelectedId = routeResult ? null : tab === 'favorites' ? (selectedId !== null && favorites.ids.has(selectedId) ? selectedId : null) : activeId
   const pinColors = useMemo(() => routeResult?.stops.map((stop) => routeColor(stop.seq)), [routeResult])
   const segments = useMemo(
     () =>
@@ -95,6 +134,8 @@ export default function App() {
           error={auth.error}
           onLogin={auth.login}
           onLogout={auth.logout}
+          loginOpen={loginOpen}
+          onLoginOpenChange={setLoginOpen}
         />
       </header>
       {loginFailed && (
@@ -116,23 +157,31 @@ export default function App() {
       <main className="app__main">
         <aside className="app__side">
           <nav className="tabs" aria-label="보기 전환">
-            <button
-              type="button"
-              className="tabs__tab"
-              aria-current={tab === 'list' ? 'page' : undefined}
-              onClick={() => setView('list')}
-            >
-              빵집 목록
-            </button>
-            <button
-              type="button"
-              className="tabs__tab"
-              aria-current={tab === 'route' ? 'page' : undefined}
-              onClick={() => setView('route')}
-            >
-              내 동선 ({route.basket.length})
-            </button>
+            {(
+              [
+                ['list', '빵집 목록'],
+                ['favorites', auth.user ? `즐겨찾기 (${favorites.items.length})` : '즐겨찾기'],
+                ['route', `내 동선 (${route.basket.length})`],
+                ['courses', '내 코스'],
+              ] as [TabView, string][]
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className="tabs__tab"
+                aria-current={tab === value ? 'page' : undefined}
+                onClick={() => setView(value)}
+              >
+                {label}
+              </button>
+            ))}
           </nav>
+
+          {favorites.error && tab !== 'favorites' && (
+            <p className="notice notice--error" role="alert">
+              {favorites.error}
+            </p>
+          )}
 
           {tab === 'list' && (
           <FilterBar
@@ -164,6 +213,33 @@ export default function App() {
               inBasket={basketIds.has(detailId)}
               basketFull={route.full}
               onToggleBasket={detailSummary ? () => route.toggle(detailSummary) : undefined}
+              isFavorite={favorites.ids.has(detailId)}
+              onToggleFavorite={detailSummary ? () => toggleFavorite(detailSummary) : undefined}
+            />
+          ) : view === 'favorites' ? (
+            <FavoritesPanel
+              loggedIn={auth.user !== null}
+              onLogin={() => setLoginOpen(true)}
+              items={favorites.items}
+              loading={favorites.loading}
+              error={favorites.error}
+              selectedId={selectedId}
+              onSelect={handleSelect}
+              basketIds={basketIds}
+              basketFull={route.full}
+              onToggleBasket={route.toggle}
+              favoriteIds={favorites.ids}
+              onToggleFavorite={toggleFavorite}
+            />
+          ) : view === 'courses' ? (
+            <CoursesPanel
+              loggedIn={auth.user !== null}
+              onLogin={() => setLoginOpen(true)}
+              courses={courses.items}
+              loading={courses.loading}
+              error={courses.error}
+              onLoad={loadCourse}
+              onDelete={courses.remove}
             />
           ) : view === 'route' ? (
             <RoutePanel
@@ -178,6 +254,10 @@ export default function App() {
               onRemove={route.remove}
               onClear={route.clear}
               onSelect={handleSelect}
+              loggedIn={auth.user !== null}
+              onLogin={() => setLoginOpen(true)}
+              onSaveCourse={saveCourse}
+              onOpenCourses={() => setView('courses')}
             />
           ) : (
             <BakeryList
@@ -191,6 +271,8 @@ export default function App() {
               basketIds={basketIds}
               basketFull={route.full}
               onToggleBasket={route.toggle}
+              favoriteIds={favorites.ids}
+              onToggleFavorite={toggleFavorite}
             />
           )}
         </aside>
@@ -200,7 +282,7 @@ export default function App() {
             <KakaoMap
               appKey={KAKAO_JS_KEY}
               bakeries={mapBakeries}
-              selectedId={routeResult ? null : activeId}
+              selectedId={mapSelectedId}
               userLocation={geo.location}
               onSelect={handleSelect}
               segments={segments}

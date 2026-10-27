@@ -989,3 +989,96 @@
 a.btn.btn--block {
   text-decoration: none;
 }
+
+/* ── 즐겨찾기 / 코스 ───────────────────────────────── */
+.list__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 36px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
+.icon-btn--on {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.btn.icon-btn {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.btn.icon-btn--on {
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
+.btn--danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+}
+
+.courses {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.course-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.course-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.course-card__stops {
+  margin: 2px 0 6px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.course-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.field-block__label {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.tabs__tab {
+  padding: 8px 4px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}

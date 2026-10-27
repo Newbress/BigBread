@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchBakery } from '../api/client.ts'
 import type { BakeryDetail } from '../api/types.ts'
+import FavoriteButton from './FavoriteButton.tsx'
 import { formatPrice, isHttpUrl, PLATFORM_LABEL, toOpeningHoursRows } from '../lib/format.ts'
 
 type Props = {
@@ -10,6 +11,9 @@ type Props = {
   basketFull: boolean
   /** 목록에 없는 빵집(필터로 사라진 경우 등)이면 담을 수 없어 undefined */
   onToggleBasket?: () => void
+  isFavorite: boolean
+  /** 로그인하지 않았으면 로그인 창을 여는 동작이 들어온다 */
+  onToggleFavorite?: () => void
 }
 
 /** 어떤 빵집에 대한 응답인지 함께 저장해서, 현재 빵집의 응답이 왔는지(loading)를 계산한다. */
@@ -24,7 +28,15 @@ function ExternalLink({ href, children }: { href: string | null; children: strin
   )
 }
 
-export default function BakeryDetailPanel({ id, onBack, inBasket, basketFull, onToggleBasket }: Props) {
+export default function BakeryDetailPanel({
+  id,
+  onBack,
+  inBasket,
+  basketFull,
+  onToggleBasket,
+  isFavorite,
+  onToggleFavorite,
+}: Props) {
   const [result, setResult] = useState<Result | null>(null)
 
   useEffect(() => {
@@ -82,6 +94,7 @@ export default function BakeryDetailPanel({ id, onBack, inBasket, basketFull, on
           </header>
 
           <div className="detail__links">
+            {onToggleFavorite && <FavoriteButton active={isFavorite} name={detail.name} onToggle={onToggleFavorite} withLabel />}
             {onToggleBasket && (
               <button
                 type="button"
