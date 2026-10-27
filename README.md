@@ -47,6 +47,8 @@ cd frontend && npm install && npm run dev
 | POST | `/api/auth/password/forgot` | 비밀번호 재설정 링크를 메일로 요청 (아이디 입력) |
 | POST | `/api/auth/password/reset` | 링크의 토큰과 새 비밀번호로 재설정 |
 | POST | `/api/auth/find-id` | 이메일로 가입된 아이디를 메일로 안내 |
+| GET·PUT·DELETE | `/api/my/favorites`, `/api/my/favorites/{bakeryId}` | 내 즐겨찾기 조회·추가·해제 (로그인 필요) |
+| GET·POST·PUT·DELETE | `/api/my/courses`, `/api/my/courses/{id}` | 내 코스(저장한 동선) 조회·저장·이름 변경·삭제 (로그인 필요) |
 | GET | `/api/me` | 로그인 상태와 내 정보 (비로그인이면 `authenticated: false`) |
 | POST | `/api/logout` | 로그아웃 (CSRF 토큰 필요) |
 | GET | `/api/bakeries/{id}` | 빵집 상세 (대표 빵, 원본 게시물 링크, 영업시간, 인스타·카카오맵 링크) |
@@ -227,6 +229,17 @@ curl -c jar -b jar -H "X-XSRF-TOKEN: <jar의 XSRF-TOKEN 값>" -H 'Content-Type: 
   -d '{"loginId":"BreadFan","email":"fan@example.com","password":"Bread-Lover#2024","nickname":"빵순이","agreedToTerms":true}'
 # 서버 로그에 찍힌 verify-email 링크의 token으로 POST /api/auth/verify-email, 이어서 POST /api/auth/login
 ```
+
+## 즐겨찾기 · 내 코스 (로그인 필요)
+
+화면 왼쪽 패널의 탭 `빵집 목록 | 즐겨찾기 | 내 동선 | 내 코스`로 쓴다.
+
+- **즐겨찾기**: 목록 카드와 상세의 하트(♡)로 담고 해제한다. 즐겨찾기 탭에는 최근에 담은 순서로 나오고, 지도에는 이 빵집들만 표시된다. 비로그인으로 하트를 누르면 로그인 창이 열린다.
+  - `PUT/DELETE /api/my/favorites/{bakeryId}`는 멱등(이미 담았거나 없어도 오류 없음), 없거나 숨김인 빵집은 404, 최대 300곳. 숨김 처리된 빵집은 목록에서 빠진다.
+- **내 코스**: 내 동선 결과에서 `코스로 저장`을 누르면 **지금 보이는 방문 순서 그대로** 저장된다(이름은 기본값 제안, 최대 50개, 한 코스 1~10곳). 내 코스 탭에서 `동선으로 불러오기`를 누르면 저장한 순서 그대로 내 동선에 담기고 방문 순서는 `담은 순서`로 설정된다. 삭제는 한 번 더 확인한다.
+  - **출발 위치(내 위치)는 저장하지 않는다.** 개인 좌표를 서버에 남기지 않으려는 선택이다. 불러온 뒤 내 위치가 켜져 있으면 그 위치에서 출발하는 동선이 만들어진다.
+  - 남의 코스는 조회·수정·삭제 모두 404다. 코스에 쓰인 빵집은 DB에서 지울 수 없고(제약), 숨김 처리로 운영한다.
+- 로그인이 필요한 API는 `/api/my/**` 아래에 있고(비로그인 401), 변경 요청은 CSRF 토큰이 필요하다.
 
 ## 테스트
 

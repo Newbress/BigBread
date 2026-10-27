@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import type { AuthOptions, AuthProvider, User } from '../api/types.ts'
 import { isHttpUrl } from '../lib/format.ts'
+import { wantsLoginOnLoad } from '../lib/loginParam.ts'
 import LoginDialog from './auth/LoginDialog.tsx'
 
 type Props = {
@@ -11,19 +12,26 @@ type Props = {
   error: string | null
   onLogin: (loginId: string, password: string) => Promise<void>
   onLogout: () => void
+  /** 로그인 창이 열려 있는지 (다른 화면에서도 열 수 있도록 부모가 가진다) */
+  loginOpen: boolean
+  onLoginOpenChange: (open: boolean) => void
 }
 
-/** 메일 링크(가입 완료 등)에서 돌아올 때 로그인 창을 바로 열기 위한 주소 파라미터(?login=1). */
-function wantsLoginOnLoad(): boolean {
-  return new URLSearchParams(window.location.search).get('login') === '1'
-}
-
-export default function AuthMenu({ loading, providers, options, user, error, onLogin, onLogout }: Props) {
-  const [open, setOpen] = useState(wantsLoginOnLoad)
+export default function AuthMenu({
+  loading,
+  providers,
+  options,
+  user,
+  error,
+  onLogin,
+  onLogout,
+  loginOpen: open,
+  onLoginOpenChange,
+}: Props) {
   const triggerRef = useRef<HTMLButtonElement>(null)
 
   const close = () => {
-    setOpen(false)
+    onLoginOpenChange(false)
     // 창을 닫으면 로그인 버튼으로 포커스를 돌려준다.
     queueMicrotask(() => triggerRef.current?.focus())
     if (wantsLoginOnLoad()) window.history.replaceState(null, '', window.location.pathname)
@@ -55,7 +63,7 @@ export default function AuthMenu({ loading, providers, options, user, error, onL
 
   return (
     <div className="auth">
-      <button ref={triggerRef} type="button" className="btn btn--small" onClick={() => setOpen(true)}>
+      <button ref={triggerRef} type="button" className="btn btn--small" onClick={() => onLoginOpenChange(true)}>
         로그인
       </button>
       {open && (

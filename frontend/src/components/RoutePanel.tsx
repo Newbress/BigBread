@@ -1,4 +1,6 @@
 import type { CSSProperties } from 'react'
+import { useState } from 'react'
+import type { FormEvent } from 'react'
 import type { BakerySummary, RouteOrder, RouteResponse } from '../api/types.ts'
 import { formatDistance, formatDuration, isHttpUrl } from '../lib/format.ts'
 import { MAX_ROUTE_STOPS, ROUTE_ORDER_LABEL, routeColor, SELECTABLE_ROUTE_ORDERS } from '../lib/route.ts'
@@ -15,6 +17,12 @@ type Props = {
   onRemove: (id: number) => void
   onClear: () => void
   onSelect: (id: number) => void
+  loggedIn: boolean
+  /** 비로그인이면 로그인 창을 연다 */
+  onLogin: () => void
+  /** 지금 만든 동선(방문 순서 그대로)을 코스로 저장한다. 실패하면 오류를 던진다. */
+  onSaveCourse: (title: string, route: RouteResponse) => Promise<void>
+  onOpenCourses: () => void
 }
 
 function Basket({ basket, onRemove }: Pick<Props, 'basket' | 'onRemove'>) {
@@ -32,6 +40,93 @@ function Basket({ basket, onRemove }: Pick<Props, 'basket' | 'onRemove'>) {
         </li>
       ))}
     </ul>
+  )
+}
+
+/** 지금 만든 동선을 코스로 저장하는 작은 폼. */
+function SaveCourse({
+  route,
+  loggedIn,
+  onLogin,
+  onSaveCourse,
+  onOpenCourses,
+}: Pick<Props, 'loggedIn' | 'onLogin' | 'onSaveCourse' | 'onOpenCourses'> & { route: RouteResponse }) {
+  const first = route.stops[0]?.bakery.name ?? '내 코스'
+  const defaultTitle = route.stops.length > 1 ? `${first} 외 ${route.stops.length - 1}곳` : first
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState(defaultTitle)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [savedTitle, setSavedTitle] = useState<string | null>(null)
+
+  if (!loggedIn) {
+    return (
+      <button type="button" className="btn btn--block" onClick={onLogin}>
+        로그인하고 코스로 저장
+      </button>
+    )
+  }
+
+  if (savedTitle !== null) {
+    return (
+      <p className="notice" role="status">
+        &lsquo;{savedTitle}&rsquo;를 저장했어요.{' '}
+        <button type="button" className="link-btn" onClick={onOpenCourses}>
+          내 코스 보기
+        </button>
+      </p>
+    )
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="btn btn--block" onClick={() => setOpen(true)}>
+        코스로 저장
+      </button>
+    )
+  }
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (busy) return
+    const trimmed = title.trim()
+    if (!trimmed) {
+      setError('코스 이름을 입력해 주세요.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await onSaveCourse(trimmed, route)
+      setSavedTitle(trimmed)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '저장에 실패했어요.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form className="auth-form" onSubmit={submit} noValidate>
+      <label className="field-block">
+        <span className="field-block__label">코스 이름</span>
+        <input value={title} maxLength={100} onChange={(event) => setTitle(event.target.value)} />
+      </label>
+      <p className="card__meta">지금 보이는 방문 순서 그대로 저장돼요. (출발 위치는 저장하지 않아요)</p>
+      {error && (
+        <p className="notice notice--error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="course-card__actions">
+        <button type="submit" className="btn btn--on" disabled={busy}>
+          {busy ? '저장하는 중…' : '저장'}
+        </button>
+        <button type="button" className="btn" onClick={() => setOpen(false)}>
+          취소
+        </button>
+      </div>
+    </form>
   )
 }
 
@@ -135,6 +230,16 @@ export default function RoutePanel(props: Props) {
             </p>
           )}
           <Result route={route} onSelect={props.onSelect} />
+          {route && (
+            <SaveCourse
+              key={route.stops.map((stop) => stop.bakery.id).join(',')}
+              route={route}
+              loggedIn={props.loggedIn}
+              onLogin={props.onLogin}
+              onSaveCourse={props.onSaveCourse}
+              onOpenCourses={props.onOpenCourses}
+            />
+          )}
         </>
       )}
     </section>
