@@ -65,6 +65,11 @@ class LocalAuthApiTest {
     }
 
     @Test
+    void 메일을_보낼_수_있으면_가입_기능이_켜진_것으로_알려준다() throws Exception {
+        mvc.perform(get("/api/auth/options")).andExpect(status().isOk()).andExpect(jsonPath("$.signupEnabled").value(true));
+    }
+
+    @Test
     void 가입_인증_로그인_로그아웃_전체_흐름() throws Exception {
         signup("BreadFan", "Fan@Example.com", PASSWORD, "빵순이").andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.message").value(containsString("인증 메일")));

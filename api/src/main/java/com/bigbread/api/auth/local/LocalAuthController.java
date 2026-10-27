@@ -54,6 +54,16 @@ public class LocalAuthController {
         this.securityContextRepository = securityContextRepository;
     }
 
+    /** @param signupEnabled 메일을 보낼 수 있어서 회원가입·아이디/비밀번호 찾기를 쓸 수 있으면 true */
+    public record Options(boolean signupEnabled) {
+    }
+
+    /** 화면이 가입·찾기 메뉴를 보여줄지 정하는 데 쓴다. */
+    @GetMapping("/options")
+    public Options options() {
+        return new Options(accounts.signupAvailable());
+    }
+
     public record IdAvailability(boolean available) {
     }
 
