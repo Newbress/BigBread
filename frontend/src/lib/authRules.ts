@@ -71,6 +71,9 @@ export function checkPassword(password: string): PasswordChecks {
   }
 }
 
+/** 입력창 아래에 보여줄 한 줄 규칙 안내 */
+export const PASSWORD_HINT = `(영문·숫자·특수문자를 모두 포함, ${PASSWORD_MIN}~${PASSWORD_MAX}자)`
+
 export function passwordError(password: string, loginId: string): string | null {
   const checks = checkPassword(password)
   if (!checks.length) return `비밀번호는 ${PASSWORD_MIN}~${PASSWORD_MAX}자로 입력해 주세요.`

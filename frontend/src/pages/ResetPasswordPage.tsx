@@ -4,9 +4,8 @@ import { Link, useSearchParams } from 'react-router'
 import { resetPassword } from '../api/client.ts'
 import AuthPageLayout from '../components/AuthPageLayout.tsx'
 import FormField from '../components/auth/FormField.tsx'
-import PasswordChecklist from '../components/auth/PasswordChecklist.tsx'
 import PasswordInput from '../components/auth/PasswordInput.tsx'
-import { passwordError } from '../lib/authRules.ts'
+import { PASSWORD_HINT, passwordError } from '../lib/authRules.ts'
 
 /** 비밀번호 재설정 메일의 링크(/reset-password?token=...)가 열리는 화면. */
 export default function ResetPasswordPage() {
@@ -68,7 +67,7 @@ export default function ResetPasswordPage() {
   return (
     <AuthPageLayout title="새 비밀번호 정하기">
       <form className="auth-form" onSubmit={submit} noValidate>
-        <FormField label="새 비밀번호" error={touched ? clientError : null}>
+        <FormField label="새 비밀번호" hint={PASSWORD_HINT} error={touched ? clientError : null}>
           {({ id, describedBy, invalid }) => (
             <PasswordInput
               id={id}
@@ -83,7 +82,6 @@ export default function ResetPasswordPage() {
             />
           )}
         </FormField>
-        <PasswordChecklist password={password} />
         <FormField label="새 비밀번호 확인" error={touched ? mismatch : null}>
           {({ id, describedBy, invalid }) => (
             <PasswordInput

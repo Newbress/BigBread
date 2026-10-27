@@ -114,19 +114,6 @@ export default function LoginDialog({ providers, signupEnabled, onLogin, onClose
 
         {mode === 'login' && (
           <>
-            {providers.length > 0 && (
-              <div className="login-dialog__buttons">
-                {providers.map((provider) => (
-                  <a key={provider.id} className={BRAND_CLASS[provider.id] ?? 'login-btn'} href={provider.loginUrl}>
-                    <span className="login-btn__icon">
-                      <ProviderIcon id={provider.id} />
-                    </span>
-                    <span className="login-btn__label">{provider.name}로 시작하기</span>
-                  </a>
-                ))}
-              </div>
-            )}
-            {providers.length > 0 && <p className="login-dialog__divider">또는 아이디로 로그인</p>}
             <LoginForm
               onLogin={onLogin}
               showRecovery={signupEnabled}
@@ -135,9 +122,23 @@ export default function LoginDialog({ providers, signupEnabled, onLogin, onClose
               onForgot={() => setMode('forgot')}
             />
             {providers.length > 0 && (
-              <p className="login-dialog__note">
-                소셜 계정과 아이디 계정은 서로 별도 계정이에요. 같은 사람이라도 로그인 방법이 다르면 다른 계정으로 취급돼요.
-              </p>
+              <>
+                <p className="login-dialog__divider">또는 소셜 계정으로 로그인</p>
+                <div className="login-dialog__buttons">
+                  {providers.map((provider) => (
+                    <a key={provider.id} className={BRAND_CLASS[provider.id] ?? 'login-btn'} href={provider.loginUrl}>
+                      <span className="login-btn__icon">
+                        <ProviderIcon id={provider.id} />
+                      </span>
+                      <span className="login-btn__label">{provider.name}로 시작하기</span>
+                    </a>
+                  ))}
+                </div>
+                <p className="login-dialog__note">
+                  소셜 계정과 아이디 계정은 서로 별도 계정이에요. 같은 사람이라도 로그인 방법이 다르면 다른 계정으로
+                  취급돼요.
+                </p>
+              </>
             )}
           </>
         )}

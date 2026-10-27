@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { checkLoginId, signup } from '../../api/client.ts'
-import { emailError, loginIdError, nicknameError, passwordError } from '../../lib/authRules.ts'
+import { emailError, loginIdError, nicknameError, PASSWORD_HINT, passwordError } from '../../lib/authRules.ts'
 import FormField from './FormField.tsx'
-import PasswordChecklist from './PasswordChecklist.tsx'
 import PasswordInput from './PasswordInput.tsx'
 
 type Availability = { id: string; state: 'checking' | 'available' | 'taken' | 'error' } | null
@@ -56,7 +55,7 @@ export default function SignupForm({ onBack, onDone }: Props) {
       ? '확인하는 중…'
       : checked === 'available'
         ? '사용할 수 있는 아이디예요.'
-        : '영문으로 시작하는 영문·숫자 5~20자 (대소문자 구분 없음)'
+        : '(영문으로 시작하는 영문·숫자 5~20자, 대소문자 구분 없음)'
   const idError = errors.loginId ?? (checked === 'taken' ? '이미 사용 중인 아이디예요.' : null)
 
   const clientValid =
@@ -101,7 +100,7 @@ export default function SignupForm({ onBack, onDone }: Props) {
           />
         )}
       </FormField>
-      <FormField label="이메일" hint="가입 인증과 아이디·비밀번호 찾기에 쓰여요." error={errors.email}>
+      <FormField label="이메일" hint="(인증과 아이디·비밀번호 찾기에 쓰여요)" error={errors.email}>
         {({ id, describedBy, invalid }) => (
           <input
             id={id}
@@ -115,7 +114,7 @@ export default function SignupForm({ onBack, onDone }: Props) {
           />
         )}
       </FormField>
-      <FormField label="비밀번호" error={errors.password}>
+      <FormField label="비밀번호" hint={PASSWORD_HINT} error={errors.password}>
         {({ id, describedBy, invalid }) => (
           <PasswordInput
             id={id}
@@ -130,7 +129,6 @@ export default function SignupForm({ onBack, onDone }: Props) {
           />
         )}
       </FormField>
-      <PasswordChecklist password={password} />
       <FormField label="비밀번호 확인" error={errors.confirm}>
         {({ id, describedBy, invalid }) => (
           <PasswordInput
@@ -146,7 +144,7 @@ export default function SignupForm({ onBack, onDone }: Props) {
           />
         )}
       </FormField>
-      <FormField label="닉네임" hint="다른 사람에게 보이는 이름이에요 (2~20자)." error={errors.nickname}>
+      <FormField label="닉네임" hint="(다른 사람에게 보이는 이름, 2~20자)" error={errors.nickname}>
         {({ id, describedBy, invalid }) => (
           <input
             id={id}
@@ -160,18 +158,23 @@ export default function SignupForm({ onBack, onDone }: Props) {
         )}
       </FormField>
 
-      <details className="consent">
-        <summary>개인정보 수집·이용 안내</summary>
-        <ul>
-          <li>수집 항목: 아이디, 이메일, 비밀번호(암호화해 저장), 닉네임</li>
-          <li>이용 목적: 회원 식별, 로그인, 이메일 인증, 아이디·비밀번호 찾기</li>
-          <li>보유 기간: 회원 탈퇴 시까지</li>
-        </ul>
-      </details>
-      <label className="check">
-        <input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} />
-        개인정보 수집·이용에 동의해요 (필수)
-      </label>
+      <div className="consent">
+        <label className="check">
+          <input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} />
+          개인정보 수집·이용에 동의해요 (필수)
+        </label>
+        <details>
+          <summary>내용 보기</summary>
+          <dl className="consent__table">
+            <dt>수집 항목</dt>
+            <dd>아이디, 이메일, 비밀번호(암호화해 저장), 닉네임</dd>
+            <dt>이용 목적</dt>
+            <dd>회원 식별, 로그인, 이메일 인증, 아이디·비밀번호 찾기</dd>
+            <dt>보유 기간</dt>
+            <dd>회원 탈퇴 시까지</dd>
+          </dl>
+        </details>
+      </div>
 
       {submitError && (
         <p className="notice notice--error" role="alert">
