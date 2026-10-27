@@ -107,6 +107,7 @@ export default function BakeryDetailPanel({
               </button>
             )}
             <ExternalLink href={detail.links.kakaoMap}>카카오맵에서 보기</ExternalLink>
+            <ExternalLink href={detail.links.naverMap}>네이버 지도에서 보기</ExternalLink>
             <ExternalLink href={detail.links.instagram}>인스타그램</ExternalLink>
           </div>
 
