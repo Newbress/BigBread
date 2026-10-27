@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDistance, formatPrice, isHttpUrl, toOpeningHoursRows } from './format.ts'
+import { formatDistance, formatPrice, formatRating, isHttpUrl, toOpeningHoursRows } from './format.ts'
 
 describe('formatDistance', () => {
   it('1km 미만은 미터로 반올림해서 보여준다', () => {
@@ -81,5 +81,13 @@ describe('toOpeningHoursRows', () => {
     expect(toOpeningHoursRows('08:00-20:00')).toBeNull()
     expect(toOpeningHoursRows({})).toBeNull()
     expect(toOpeningHoursRows({ mon: 123 })).toBeNull()
+  })
+})
+
+describe('formatRating', () => {
+  it('평균과 개수를 함께 보여주고 리뷰가 없으면 빈 문자열이다', () => {
+    expect(formatRating(4.5, 12)).toBe('4.5 (12)')
+    expect(formatRating(5, 1)).toBe('5.0 (1)')
+    expect(formatRating(null, 0)).toBe('')
   })
 })
