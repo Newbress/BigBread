@@ -179,7 +179,8 @@ public class BakeryQueryService {
         String kakaoPlaceId = rs.getString("kakao_place_id");
         BakeryDetail.Links links = new BakeryDetail.Links(
                 instagram == null ? null : "https://www.instagram.com/" + instagram + "/",
-                kakaoPlaceId == null ? null : "https://place.map.kakao.com/" + kakaoPlaceId);
+                kakaoPlaceId == null ? null : "https://place.map.kakao.com/" + kakaoPlaceId,
+                ExternalLinks.naverMapSearch(rs.getString("name"), rs.getString("road_address"), rs.getString("jibun_address")));
         String hours = rs.getString("opening_hours");
         return new BakeryDetail(
                 rs.getLong("id"), rs.getString("name"), district(rs), rs.getString("road_address"),

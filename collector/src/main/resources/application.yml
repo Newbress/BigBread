@@ -19,3 +19,15 @@ spring:
   flyway:
     # 스키마 마이그레이션은 api 모듈이 담당한다 (동시 실행 경합 방지)
     enabled: false
+
+collector:
+  # 실행할 작업: --collector.job=kakao-bakeries (비워 두면 사용법만 출력)
+  job: ${COLLECTOR_JOB:}
+  dry-run: false
+  kakao:
+    rest-api-key: ${KAKAO_REST_API_KEY:}
+    # 호출 사이 대기(ms) — 카카오 호출 한도를 넘지 않게
+    request-delay-ms: 60
+  # 검색할 영역(위경도). 비워 두면 대전 전체. 결과는 주소가 '대전'인 것만 남긴다.
+  # 빵집 이름에 아래가 들어 있으면 제외한다. 바꾸려면 이 목록을 덮어쓴다.
+  # excluded-names: 파리바게뜨,파리바게트,뚜레쥬르,던킨,크리스피크림

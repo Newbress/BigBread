@@ -144,6 +144,7 @@ class BakeryApiTest {
                 .andExpect(jsonPath("$.openingHours.mon").value("08:00-20:00"))
                 .andExpect(jsonPath("$.links.instagram").value("https://www.instagram.com/test_bakery/"))
                 .andExpect(jsonPath("$.links.kakaoMap").value("https://place.map.kakao.com/12345"))
+                .andExpect(jsonPath("$.links.naverMap").value("https://map.naver.com/p/search/%ED%85%8C%EC%8A%A4%ED%8A%B8B"))
                 .andExpect(jsonPath("$.breads[*].name", contains("소금빵", "튀소", "식빵")))
                 .andExpect(jsonPath("$.breads[0].signature").value(true))
                 .andExpect(jsonPath("$.sourceLinks[*].title", contains("최신 글", "예전 글")));

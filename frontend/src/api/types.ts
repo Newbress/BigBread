@@ -37,7 +37,7 @@ export type BakeryDetail = {
   /** { mon: "08:00-21:00", ..., sun: "closed" } 형태의 JSON. 없으면 null */
   openingHours: unknown
   popularityScore: number
-  links: { instagram: string | null; kakaoMap: string | null }
+  links: { instagram: string | null; kakaoMap: string | null; naverMap: string | null }
   breads: {
     id: number
     name: string

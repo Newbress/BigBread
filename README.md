@@ -228,6 +228,30 @@ curl -c jar -b jar -H "X-XSRF-TOKEN: <jar의 XSRF-TOKEN 값>" -H 'Content-Type: 
 # 서버 로그에 찍힌 verify-email 링크의 token으로 POST /api/auth/verify-email, 이어서 POST /api/auth/login
 ```
 
+## 데이터 수집기 (`collector`)
+
+대전 5개 구의 빵집을 **카카오 로컬 API**로 모아 DB에 저장하는 별도 프로세스다 (API 서버와 따로 실행한다).
+영업시간·메뉴·별점·사진처럼 공식 API가 없는 정보는 **가져오지 않고**, 상세 화면의 **카카오맵 / 네이버 지도 링크**로 원본에서 확인하게 한다.
+
+```bash
+# 1) 어떤 작업이 있는지 보기
+./gradlew :collector:bootRun
+# 2) 저장하지 않고 결과만 미리 보기 (dry-run)
+./gradlew :collector:bootRun --args="--collector.job=kakao-bakeries --collector.dry-run=true"
+# 3) 실제로 수집해서 저장
+./gradlew :collector:bootRun --args="--collector.job=kakao-bakeries"
+```
+
+- 필요한 것: `.env`의 `KAKAO_REST_API_KEY` (Kakao Developers에서 **카카오맵 사용 설정**이 켜져 있어야 한다), DB 실행 중 + API 서버로 마이그레이션이 끝난 상태.
+- **동작**: 카카오 키워드 검색은 한 번에 최대 45개만 주기 때문에, 대전 전체를 격자 구역으로 나눠 검색하고 **45개가 넘어 잘린 구역은 4등분해서 다시 검색**한다. 결과는 카카오 장소 ID로 중복을 제거한다.
+- **저장 규칙**
+  - 주소가 대전 5개 구이고, 카테고리가 `제과,베이커리`인 곳만 저장한다.
+  - **대형 프랜차이즈는 제외**한다(기본: 파리바게뜨, 뚜레쥬르, 던킨, 크리스피크림). 바꾸려면 `--collector.excluded-names=...`로 목록을 덮어쓴다 (빈 값이면 제외 없음).
+  - **카카오 장소 ID 기준으로 추가·갱신**한다. 다시 실행해도 중복으로 쌓이지 않고, 이름·주소·좌표·전화만 갱신한다. 운영에서 정한 값(숨김·폐업 상태, 인기 점수, 영업시간, 인스타 계정)은 **덮어쓰지 않는다**.
+- 끝나면 요약을 출력한다: API 호출 수, 검색 결과, 분류별 개수(저장 대상 / 빵집 아님 / 대전 밖 / 제외 이름), 구별 개수, 새로 추가/갱신 개수. `더 쪼갤 수 없는 구역에서 결과가 잘렸어요` 경고가 나오면 그 구역의 일부 빵집이 빠졌을 수 있다는 뜻이다.
+- 옵션: `--collector.keywords=빵집,베이커리,제과점`, `--collector.category-keywords=제과,베이커리`, `--collector.area.*`(검색 영역), `--collector.kakao.request-delay-ms`(호출 간격).
+- 앞으로 추가할 작업: 네이버 검색 API(후기 링크·인기 지표), 공공데이터(제과점 인허가 영업 상태).
+
 ## 테스트
 
 프론트엔드 단위 테스트: `cd frontend && npm test` (vitest)
