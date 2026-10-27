@@ -85,7 +85,7 @@ public class BakeryQueryService {
         String select = """
                 SELECT b.id, b.name, d.id AS district_id, d.code AS district_code, d.name AS district_name,
                        b.road_address, ST_Y(b.location) AS lat, ST_X(b.location) AS lng,
-                       b.popularity_score,
+                       b.popularity_score, b.rating_avg, b.review_count,
                        ARRAY(SELECT br.name FROM bread br
                               WHERE br.bakery_id = b.id AND br.signature ORDER BY br.id LIMIT 3) AS signature_breads,
                        %s AS distance_m
@@ -105,7 +105,7 @@ public class BakeryQueryService {
         BakeryDetail head = jdbc.sql("""
                         SELECT b.id, b.name, d.id AS district_id, d.code AS district_code, d.name AS district_name,
                                b.road_address, b.jibun_address, ST_Y(b.location) AS lat, ST_X(b.location) AS lng,
-                               b.phone, b.opening_hours::text AS opening_hours, b.popularity_score,
+                               b.phone, b.opening_hours::text AS opening_hours, b.popularity_score, b.rating_avg, b.review_count,
                                b.instagram_username, b.kakao_place_id
                           FROM bakery b JOIN district d ON d.id = b.district_id
                          WHERE b.id = :id AND b.status = 'ACTIVE'
@@ -138,7 +138,7 @@ public class BakeryQueryService {
                 .list();
 
         return new BakeryDetail(head.id(), head.name(), head.district(), head.roadAddress(), head.jibunAddress(),
-                head.lat(), head.lng(), head.phone(), head.openingHours(), head.popularityScore(), head.links(),
+                head.lat(), head.lng(), head.phone(), head.openingHours(), head.popularityScore(), head.ratingAvg(), head.reviewCount(), head.links(),
                 breads, links);
     }
 
@@ -153,7 +153,7 @@ public class BakeryQueryService {
         return jdbc.sql("""
                         SELECT b.id, b.name, d.id AS district_id, d.code AS district_code, d.name AS district_name,
                                b.road_address, ST_Y(b.location) AS lat, ST_X(b.location) AS lng,
-                               b.popularity_score,
+                               b.popularity_score, b.rating_avg, b.review_count,
                                ARRAY(SELECT br.name FROM bread br
                                       WHERE br.bakery_id = b.id AND br.signature ORDER BY br.id LIMIT 3) AS signature_breads,
                                NULL::double precision AS distance_m
@@ -170,6 +170,7 @@ public class BakeryQueryService {
         return new BakerySummary(
                 rs.getLong("id"), rs.getString("name"), district(rs), rs.getString("road_address"),
                 rs.getDouble("lat"), rs.getDouble("lng"), rs.getDouble("popularity_score"),
+                ratingAvg(rs), rs.getInt("review_count"),
                 toList(rs.getArray("signature_breads")),
                 distance == null ? null : Math.round(distance * 10) / 10.0);
     }
@@ -186,7 +187,13 @@ public class BakeryQueryService {
                 rs.getLong("id"), rs.getString("name"), district(rs), rs.getString("road_address"),
                 rs.getString("jibun_address"), rs.getDouble("lat"), rs.getDouble("lng"), rs.getString("phone"),
                 hours == null ? null : jsonMapper.readValue(hours, Object.class),
-                rs.getDouble("popularity_score"), links, List.of(), List.of());
+                rs.getDouble("popularity_score"), ratingAvg(rs), rs.getInt("review_count"),
+                links, List.of(), List.of());
+    }
+
+    private static Double ratingAvg(ResultSet rs) throws SQLException {
+        java.math.BigDecimal avg = rs.getBigDecimal("rating_avg");
+        return avg == null ? null : avg.doubleValue();
     }
 
     private DistrictInfo district(ResultSet rs) throws SQLException {
