@@ -4,12 +4,16 @@ import type {
   AuthProvider,
   BakeryDetail,
   BakerySummary,
+  CourseDetail,
+  CourseSummary,
   District,
+  FavoriteItem,
   Me,
   Message,
   PageResponse,
   RouteRequest,
   RouteResponse,
+  SaveCourseRequest,
   SignupRequest,
 } from './types.ts'
 
@@ -67,10 +71,10 @@ export function fetchMe(signal?: AbortSignal): Promise<Me> {
 }
 
 /**
- * 변경 요청(POST)은 CSRF 토큰이 필요하다: 쿠키 XSRF-TOKEN 값을 X-XSRF-TOKEN 헤더로 돌려보낸다.
+ * 변경 요청(POST/PUT/DELETE)은 CSRF 토큰이 필요하다: 쿠키 XSRF-TOKEN 값을 X-XSRF-TOKEN 헤더로 돌려보낸다.
  * 쿠키가 아직 없으면(예: 메일 링크로 바로 들어온 페이지) 아무 GET으로 먼저 받아 온다.
  */
-async function postJson<T>(url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+async function sendJson<T>(method: 'POST' | 'PUT' | 'DELETE', url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   let token = readCookie('XSRF-TOKEN')
   if (!token) {
     await fetch('/api/me', { signal })
@@ -79,7 +83,11 @@ async function postJson<T>(url: string, body?: unknown, signal?: AbortSignal): P
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (token) headers['X-XSRF-TOKEN'] = token
   if (body !== undefined) headers['Content-Type'] = 'application/json'
-  return requestJson<T>(url, { method: 'POST', signal, headers, body: body === undefined ? undefined : JSON.stringify(body) })
+  return requestJson<T>(url, { method, signal, headers, body: body === undefined ? undefined : JSON.stringify(body) })
+}
+
+function postJson<T>(url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+  return sendJson<T>('POST', url, body, signal)
 }
 
 export async function logout(): Promise<void> {
@@ -130,4 +138,34 @@ export function planRoute(request: RouteRequest, signal?: AbortSignal): Promise<
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
+}
+
+// ---- 내 즐겨찾기 / 내 코스 (로그인 필요) ----
+
+export function fetchFavorites(signal?: AbortSignal): Promise<FavoriteItem[]> {
+  return getJson<FavoriteItem[]>('/api/my/favorites', signal)
+}
+
+export function addFavorite(bakeryId: number): Promise<void> {
+  return sendJson<void>('PUT', `/api/my/favorites/${bakeryId}`)
+}
+
+export function removeFavorite(bakeryId: number): Promise<void> {
+  return sendJson<void>('DELETE', `/api/my/favorites/${bakeryId}`)
+}
+
+export function fetchCourses(signal?: AbortSignal): Promise<CourseSummary[]> {
+  return getJson<CourseSummary[]>('/api/my/courses', signal)
+}
+
+export function fetchCourse(id: number, signal?: AbortSignal): Promise<CourseDetail> {
+  return getJson<CourseDetail>(`/api/my/courses/${id}`, signal)
+}
+
+export function saveCourse(request: SaveCourseRequest): Promise<CourseDetail> {
+  return postJson<CourseDetail>('/api/my/courses', request)
+}
+
+export function deleteCourse(id: number): Promise<void> {
+  return sendJson<void>('DELETE', `/api/my/courses/${id}`)
 }

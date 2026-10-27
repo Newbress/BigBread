@@ -130,3 +130,32 @@ export type SignupRequest = {
 }
 
 export type Message = { message: string }
+
+export type FavoriteItem = { bakery: BakerySummary; favoritedAt: string }
+
+export type CourseSummary = {
+  id: number
+  title: string
+  description: string | null
+  order: RouteOrder
+  stopCount: number
+  stopNames: string[]
+  createdAt: string
+}
+
+export type CourseDetail = {
+  id: number
+  title: string
+  description: string | null
+  order: RouteOrder
+  createdAt: string
+  /** 저장한 방문 순서 그대로 */
+  stops: BakerySummary[]
+}
+
+export type SaveCourseRequest = {
+  title: string
+  description?: string
+  order: RouteOrder
+  bakeryIds: number[]
+}

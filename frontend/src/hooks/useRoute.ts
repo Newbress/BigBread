@@ -24,6 +24,12 @@ export function useRoute(start: Coords | null) {
   const remove = useCallback((id: number) => setBasket((current) => current.filter((item) => item.id !== id)), [])
   const clear = useCallback(() => setBasket([]), [])
 
+  /** 저장한 코스를 불러온다: 담은 빵집을 통째로 바꾸고, 저장된 순서를 그대로 쓰도록 '담은 순서'로 둔다. */
+  const replaceBasket = useCallback((stops: BakerySummary[]) => {
+    setBasket(stops.slice(0, MAX_ROUTE_STOPS))
+    setOrder('MANUAL')
+  }, [])
+
   const plan = useCallback(async () => {
     const requestKey = key
     setPendingKey(requestKey)
@@ -49,6 +55,7 @@ export function useRoute(start: Coords | null) {
     toggle,
     remove,
     clear,
+    replaceBasket,
     plan,
     full: basket.length >= MAX_ROUTE_STOPS,
     planning: pendingKey === key,
