@@ -4,6 +4,7 @@ import com.bigbread.api.bakery.BakeryQueryService;
 import com.bigbread.api.bakery.BakerySummary;
 import com.bigbread.api.common.ApiException;
 import com.bigbread.api.common.PageResponse;
+import com.bigbread.api.review.photo.PhotoService;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +22,11 @@ public class ReviewService {
 
     /** 목록에 나가는 리뷰. 작성자는 닉네임만 보이고 내부 ID는 노출하지 않는다. */
     public record Item(long id, int rating, String content, String nickname, boolean mine,
-                       OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+                       List<PhotoService.Photo> photos, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+
+        Item withPhotos(List<PhotoService.Photo> photos) {
+            return new Item(id, rating, content, nickname, mine, photos, createdAt, updatedAt);
+        }
     }
 
     public record MyReview(long id, BakerySummary bakery, int rating, String content,
@@ -31,8 +36,10 @@ public class ReviewService {
     private final JdbcClient jdbc;
     private final BakeryQueryService bakeries;
     private final BakeryStats stats;
+    private final PhotoService photos;
 
-    public ReviewService(JdbcClient jdbc, BakeryQueryService bakeries, BakeryStats stats) {
+    public ReviewService(JdbcClient jdbc, BakeryQueryService bakeries, BakeryStats stats, PhotoService photos) {
+        this.photos = photos;
         this.jdbc = jdbc;
         this.bakeries = bakeries;
         this.stats = stats;
@@ -52,9 +59,11 @@ public class ReviewService {
                         """)
                 .param("b", bakeryId).param("limit", size).param("offset", (long) page * size)
                 .query((rs, n) -> new Item(rs.getLong("id"), rs.getInt("rating"), rs.getString("content"),
-                        rs.getString("nickname"), viewerId != null && viewerId == rs.getLong("user_id"),
+                        rs.getString("nickname"), viewerId != null && viewerId == rs.getLong("user_id"), List.of(),
                         rs.getObject("created_at", OffsetDateTime.class), rs.getObject("updated_at", OffsetDateTime.class)))
                 .list();
+        Map<Long, List<PhotoService.Photo>> byReview = photos.visibleByReview(items.stream().map(Item::id).toList());
+        items = items.stream().map(i -> i.withPhotos(byReview.getOrDefault(i.id(), List.of()))).toList();
         return PageResponse.of(items, page, size, total);
     }
 
@@ -67,9 +76,10 @@ public class ReviewService {
                         """)
                 .param("b", bakeryId).param("u", userId)
                 .query((rs, n) -> new Item(rs.getLong("id"), rs.getInt("rating"), rs.getString("content"),
-                        rs.getString("nickname"), true,
+                        rs.getString("nickname"), true, List.of(),
                         rs.getObject("created_at", OffsetDateTime.class), rs.getObject("updated_at", OffsetDateTime.class)))
-                .optional();
+                .optional()
+                .map(item -> item.withPhotos(photos.visibleByReview(List.of(item.id())).getOrDefault(item.id(), List.of())));
     }
 
     /** 내가 쓴 리뷰 전체, 최근에 쓴 순서. 숨김 처리된 빵집의 리뷰는 빠진다. */
@@ -117,6 +127,9 @@ public class ReviewService {
     /** 없어도 오류 없이 끝난다 (멱등). */
     @Transactional
     public void delete(long userId, long bakeryId) {
+        List<Long> reviewIds = jdbc.sql("SELECT id FROM review WHERE bakery_id = :b AND user_id = :u")
+                .param("b", bakeryId).param("u", userId).query(Long.class).list();
+        photos.deleteFilesAfterCommit(reviewIds);
         int deleted = jdbc.sql("DELETE FROM review WHERE bakery_id = :b AND user_id = :u")
                 .param("b", bakeryId).param("u", userId).update();
         if (deleted > 0) {

@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 키별로 "최근 window 동안 limit번까지"만 허용하는 슬라이딩 윈도우 제한기. 서버 메모리에만 저장한다
  * (재시작하면 초기화되고, 서버가 여러 대면 서버마다 따로 센다. 계정 단위 잠금은 DB에 저장되어 그 영향을 받지 않는다).
  */
-class SlidingWindowRateLimiter {
+public class SlidingWindowRateLimiter {
 
     /** 쌓인 키가 이만큼 넘으면 오래된 기록을 정리한다. */
     private static final int PRUNE_THRESHOLD = 10_000;
@@ -21,12 +21,12 @@ class SlidingWindowRateLimiter {
     private final Clock clock;
     private final Map<String, Deque<Long>> hits = new ConcurrentHashMap<>();
 
-    SlidingWindowRateLimiter(Clock clock) {
+    public SlidingWindowRateLimiter(Clock clock) {
         this.clock = clock;
     }
 
     /** 허용되면 기록하고 true, 한도를 넘으면 기록하지 않고 false. */
-    boolean tryAcquire(String key, int limit, Duration window) {
+    public boolean tryAcquire(String key, int limit, Duration window) {
         long now = clock.millis();
         long cutoff = now - window.toMillis();
         Deque<Long> queue = hits.computeIfAbsent(key, k -> new ArrayDeque<>());
@@ -46,7 +46,7 @@ class SlidingWindowRateLimiter {
         return allowed;
     }
 
-    void clear() {
+    public void clear() {
         hits.clear();
     }
 
