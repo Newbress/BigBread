@@ -12,6 +12,9 @@ export type BakerySummary = {
   lat: number
   lng: number
   popularityScore: number
+  /** 리뷰가 없으면 null */
+  ratingAvg: number | null
+  reviewCount: number
   signatureBreads: string[]
   /** 기준 위치(lat/lng)를 보냈을 때만 값이 있다. */
   distanceMeters: number | null
@@ -37,6 +40,8 @@ export type BakeryDetail = {
   /** { mon: "08:00-21:00", ..., sun: "closed" } 형태의 JSON. 없으면 null */
   openingHours: unknown
   popularityScore: number
+  ratingAvg: number | null
+  reviewCount: number
   links: { instagram: string | null; kakaoMap: string | null; naverMap: string | null }
   breads: {
     id: number
@@ -158,4 +163,15 @@ export type SaveCourseRequest = {
   description?: string
   order: RouteOrder
   bakeryIds: number[]
+}
+
+export type Review = {
+  id: number
+  rating: number
+  content: string | null
+  nickname: string
+  /** 내가 쓴 리뷰인지 (비로그인이면 항상 false) */
+  mine: boolean
+  createdAt: string
+  updatedAt: string
 }

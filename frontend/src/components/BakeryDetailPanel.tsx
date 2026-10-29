@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { fetchBakery } from '../api/client.ts'
 import type { BakeryDetail } from '../api/types.ts'
+import type { User } from '../api/types.ts'
 import FavoriteButton from './FavoriteButton.tsx'
-import { formatPrice, isHttpUrl, PLATFORM_LABEL, toOpeningHoursRows } from '../lib/format.ts'
+import ReviewSection from './ReviewSection.tsx'
+import { formatPrice, formatRating, isHttpUrl, PLATFORM_LABEL, toOpeningHoursRows } from '../lib/format.ts'
 
 type Props = {
   id: number
@@ -14,6 +16,10 @@ type Props = {
   isFavorite: boolean
   /** 로그인하지 않았으면 로그인 창을 여는 동작이 들어온다 */
   onToggleFavorite?: () => void
+  user: User | null
+  onLogin: () => void
+  /** 리뷰가 바뀌어 목록의 평점도 새로 불러와야 할 때 */
+  onReviewsChanged: () => void
 }
 
 /** 어떤 빵집에 대한 응답인지 함께 저장해서, 현재 빵집의 응답이 왔는지(loading)를 계산한다. */
@@ -36,8 +42,12 @@ export default function BakeryDetailPanel({
   onToggleBasket,
   isFavorite,
   onToggleFavorite,
+  user,
+  onLogin,
+  onReviewsChanged,
 }: Props) {
   const [result, setResult] = useState<Result | null>(null)
+  const [refresh, setRefresh] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -54,7 +64,7 @@ export default function BakeryDetailPanel({
       })
 
     return () => controller.abort()
-  }, [id])
+  }, [id, refresh])
 
   const settled = result !== null && result.id === id
   const loading = !settled
@@ -86,6 +96,14 @@ export default function BakeryDetailPanel({
               {detail.district.name}
               {detail.roadAddress ? ` · ${detail.roadAddress}` : ''}
             </p>
+            {detail.reviewCount > 0 && (
+              <p className="rating-line">
+                <span className="stars" aria-hidden="true">
+                  ★
+                </span>{' '}
+                {formatRating(detail.ratingAvg, detail.reviewCount)}
+              </p>
+            )}
             {phone && (
               <p>
                 <a href={`tel:${phone}`}>{detail.phone}</a>
@@ -143,6 +161,16 @@ export default function BakeryDetailPanel({
               </dl>
             </section>
           )}
+
+          <ReviewSection
+            bakeryId={detail.id}
+            user={user}
+            onLogin={onLogin}
+            onChanged={() => {
+              setRefresh((n) => n + 1)
+              onReviewsChanged()
+            }}
+          />
 
           <section aria-labelledby="links-title">
             <h3 id="links-title">원본 후기</h3>

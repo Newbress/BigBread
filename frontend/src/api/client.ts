@@ -11,6 +11,7 @@ import type {
   Me,
   Message,
   PageResponse,
+  Review,
   RouteRequest,
   RouteResponse,
   SaveCourseRequest,
@@ -168,4 +169,28 @@ export function saveCourse(request: SaveCourseRequest): Promise<CourseDetail> {
 
 export function deleteCourse(id: number): Promise<void> {
   return sendJson<void>('DELETE', `/api/my/courses/${id}`)
+}
+
+// ---- 리뷰 ----
+
+export function fetchReviews(bakeryId: number, page: number, signal?: AbortSignal): Promise<PageResponse<Review>> {
+  return getJson<PageResponse<Review>>(`/api/bakeries/${bakeryId}/reviews?page=${page}&size=10`, signal)
+}
+
+/** 내가 쓴 리뷰. 아직 안 썼으면 null. */
+export async function fetchMyReview(bakeryId: number, signal?: AbortSignal): Promise<Review | null> {
+  try {
+    return await getJson<Review>(`/api/my/reviews/${bakeryId}`, signal)
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null
+    throw e
+  }
+}
+
+export function saveReview(bakeryId: number, rating: number, content: string): Promise<Review> {
+  return sendJson<Review>('PUT', `/api/my/reviews/${bakeryId}`, { rating, content })
+}
+
+export function deleteReview(bakeryId: number): Promise<void> {
+  return sendJson<void>('DELETE', `/api/my/reviews/${bakeryId}`)
 }

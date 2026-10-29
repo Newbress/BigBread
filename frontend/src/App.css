@@ -1082,3 +1082,89 @@ a.btn.btn--block {
   font-size: 0.82rem;
   white-space: nowrap;
 }
+
+/* ---- 리뷰 ---- */
+.btn--primary {
+  border-color: var(--accent, #b45309);
+  background: var(--accent, #b45309);
+  color: #fff;
+}
+
+.stars {
+  color: #f59e0b;
+  letter-spacing: 1px;
+}
+
+.stars__off {
+  color: #d1d5db;
+}
+
+.rating-line {
+  margin: 4px 0;
+  font-weight: 600;
+}
+
+.reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.review__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.review__content {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.review-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  font: inherit;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  resize: vertical;
+}
+
+.rating-input {
+  display: flex;
+  gap: 2px;
+}
+
+.rating-input__star {
+  padding: 2px 4px;
+  font-size: 26px;
+  line-height: 1;
+  color: #d1d5db;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.rating-input__star--on {
+  color: #f59e0b;
+}

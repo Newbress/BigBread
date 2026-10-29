@@ -11,6 +11,8 @@ public record BakerySummary(
         double lat,
         double lng,
         double popularityScore,
+        Double ratingAvg,
+        int reviewCount,
         List<String> signatureBreads,
         Double distanceMeters) {
 
