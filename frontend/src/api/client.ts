@@ -12,6 +12,7 @@ import type {
   Message,
   PageResponse,
   Review,
+  ReviewPhoto,
   RouteRequest,
   RouteResponse,
   SaveCourseRequest,
@@ -75,7 +76,7 @@ export function fetchMe(signal?: AbortSignal): Promise<Me> {
  * 변경 요청(POST/PUT/DELETE)은 CSRF 토큰이 필요하다: 쿠키 XSRF-TOKEN 값을 X-XSRF-TOKEN 헤더로 돌려보낸다.
  * 쿠키가 아직 없으면(예: 메일 링크로 바로 들어온 페이지) 아무 GET으로 먼저 받아 온다.
  */
-async function sendJson<T>(method: 'POST' | 'PUT' | 'DELETE', url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+async function csrfHeaders(signal?: AbortSignal): Promise<Record<string, string>> {
   let token = readCookie('XSRF-TOKEN')
   if (!token) {
     await fetch('/api/me', { signal })
@@ -83,6 +84,11 @@ async function sendJson<T>(method: 'POST' | 'PUT' | 'DELETE', url: string, body?
   }
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (token) headers['X-XSRF-TOKEN'] = token
+  return headers
+}
+
+async function sendJson<T>(method: 'POST' | 'PUT' | 'DELETE', url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+  const headers = await csrfHeaders(signal)
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   return requestJson<T>(url, { method, signal, headers, body: body === undefined ? undefined : JSON.stringify(body) })
 }
@@ -193,4 +199,20 @@ export function saveReview(bakeryId: number, rating: number, content: string): P
 
 export function deleteReview(bakeryId: number): Promise<void> {
   return sendJson<void>('DELETE', `/api/my/reviews/${bakeryId}`)
+}
+
+/** 사진 한 장을 올린다 (multipart는 Content-Type을 브라우저가 경계값과 함께 정한다). */
+export async function uploadReviewPhoto(bakeryId: number, file: File, signal?: AbortSignal): Promise<ReviewPhoto> {
+  const body = new FormData()
+  body.append('file', file)
+  return requestJson<ReviewPhoto>(`/api/my/reviews/${bakeryId}/photos`, {
+    method: 'POST',
+    signal,
+    headers: await csrfHeaders(signal),
+    body,
+  })
+}
+
+export function deleteReviewPhoto(bakeryId: number, photoId: number): Promise<void> {
+  return sendJson<void>('DELETE', `/api/my/reviews/${bakeryId}/photos/${photoId}`)
 }

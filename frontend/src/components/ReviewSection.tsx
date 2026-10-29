@@ -1,8 +1,20 @@
-import { useCallback, useEffect, useState } from 'react'
-import { deleteReview, fetchMyReview, fetchReviews, saveReview } from '../api/client.ts'
-import type { PageResponse, Review, User } from '../api/types.ts'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  deleteReview,
+  deleteReviewPhoto,
+  fetchMyReview,
+  fetchReviews,
+  saveReview,
+  uploadReviewPhoto,
+} from '../api/client.ts'
+import type { PageResponse, Review, ReviewPhoto, User } from '../api/types.ts'
+import { MAX_PHOTOS, preparePhoto } from '../lib/photo.ts'
+import PhotoLightbox from './PhotoLightbox.tsx'
 
 const MAX_LENGTH = 1000
+
+/** 아직 올리지 않은 사진 (미리보기 주소는 쓰고 나면 반드시 해제한다). */
+type PendingPhoto = { key: number; file: File; previewUrl: string }
 
 type Props = {
   bakeryId: number
@@ -56,6 +68,13 @@ export default function ReviewSection({ bakeryId, user, onLogin, onChanged }: Pr
   const [formError, setFormError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [keptPhotos, setKeptPhotos] = useState<ReviewPhoto[]>([])
+  const [removedIds, setRemovedIds] = useState<number[]>([])
+  const [pending, setPending] = useState<PendingPhoto[]>([])
+  const [preparing, setPreparing] = useState(false)
+  const [lightbox, setLightbox] = useState<{ photo: ReviewPhoto; alt: string } | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+  const nextKey = useRef(0)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -73,12 +92,59 @@ export default function ReviewSection({ bakeryId, user, onLogin, onChanged }: Pr
     return () => controller.abort()
   }, [bakeryId, userId, reload])
 
+  const clearPending = useCallback((photos: PendingPhoto[]) => {
+    photos.forEach((p) => URL.revokeObjectURL(p.previewUrl))
+  }, [])
+
+  // 화면을 떠날 때 미리보기 주소를 해제한다.
+  const pendingRef = useRef(pending)
+  useEffect(() => {
+    pendingRef.current = pending
+  }, [pending])
+  useEffect(() => () => pendingRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl)), [])
+
   const startEdit = useCallback(() => {
     setRating(mine?.rating ?? 0)
     setContent(mine?.content ?? '')
+    setKeptPhotos(mine?.photos ?? [])
+    setRemovedIds([])
+    setPending((prev) => {
+      prev.forEach((p) => URL.revokeObjectURL(p.previewUrl))
+      return []
+    })
     setFormError(null)
     setEditing(true)
   }, [mine])
+
+  function cancelEdit() {
+    clearPending(pending)
+    setPending([])
+    setEditing(false)
+  }
+
+  async function addFiles(files: FileList | null) {
+    if (!files || files.length === 0) return
+    const room = MAX_PHOTOS - keptPhotos.length - pending.length
+    const chosen = Array.from(files)
+    if (chosen.length > room) {
+      setFormError(`사진은 최대 ${MAX_PHOTOS}장까지예요. ${room > 0 ? `${room}장만 추가했어요.` : ''}`)
+    } else {
+      setFormError(null)
+    }
+    setPreparing(true)
+    const added: PendingPhoto[] = []
+    for (const file of chosen.slice(0, Math.max(room, 0))) {
+      try {
+        const prepared = await preparePhoto(file)
+        added.push({ key: nextKey.current++, file: prepared, previewUrl: URL.createObjectURL(prepared) })
+      } catch (e) {
+        setFormError(e instanceof Error ? e.message : '사진을 준비하지 못했어요.')
+      }
+    }
+    setPending((prev) => [...prev, ...added])
+    setPreparing(false)
+    if (fileInput.current) fileInput.current.value = ''
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -90,14 +156,40 @@ export default function ReviewSection({ bakeryId, user, onLogin, onChanged }: Pr
     setFormError(null)
     try {
       await saveReview(bakeryId, rating, content)
-      setEditing(false)
-      setReload((n) => n + 1)
-      onChanged()
     } catch (e) {
       setFormError(e instanceof Error ? e.message : '리뷰를 저장하지 못했어요.')
-    } finally {
       setSaving(false)
+      return
     }
+
+    // 리뷰는 저장됐다. 사진은 지울 것을 지우고 새 사진을 한 장씩 올린다.
+    const failed: { photo: PendingPhoto; reason: string }[] = []
+    try {
+      for (const id of removedIds) await deleteReviewPhoto(bakeryId, id)
+    } catch (e) {
+      setFormError(`리뷰는 저장했지만 사진을 지우지 못했어요: ${e instanceof Error ? e.message : ''}`)
+    }
+    for (const photo of pending) {
+      try {
+        await uploadReviewPhoto(bakeryId, photo.file)
+        URL.revokeObjectURL(photo.previewUrl)
+      } catch (e) {
+        failed.push({ photo, reason: e instanceof Error ? e.message : '올리지 못했어요.' })
+      }
+    }
+    setReload((n) => n + 1)
+    onChanged()
+    setSaving(false)
+    if (failed.length === 0) {
+      setPending([])
+      setEditing(false)
+      return
+    }
+    // 올리지 못한 사진은 남겨 두고 이유를 보여준다 (리뷰 글은 이미 저장됨). 올라간 사진은 다시 불러온 뒤 보인다.
+    setPending(failed.map((f) => f.photo))
+    setRemovedIds([])
+    setKeptPhotos((await fetchMyReview(bakeryId).catch(() => null))?.photos ?? [])
+    setFormError(`리뷰는 저장했지만 사진 ${failed.length}장을 올리지 못했어요: ${failed[0].reason}`)
   }
 
   async function remove() {
@@ -161,6 +253,61 @@ export default function ReviewSection({ bakeryId, user, onLogin, onChanged }: Pr
           <p className="card__meta">
             {content.length} / {MAX_LENGTH}
           </p>
+          <div className="photo-edit">
+            <ul className="plain photo-edit__list">
+              {keptPhotos
+                .filter((p) => !removedIds.includes(p.id))
+                .map((photo) => (
+                  <li key={photo.id} className="photo-edit__item">
+                    <img src={photo.thumbUrl} alt="올려 둔 사진" />
+                    <button
+                      type="button"
+                      className="photo-edit__remove"
+                      aria-label="이 사진 빼기"
+                      onClick={() => setRemovedIds((ids) => [...ids, photo.id])}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              {pending.map((photo) => (
+                <li key={photo.key} className="photo-edit__item">
+                  <img src={photo.previewUrl} alt="새로 올릴 사진" />
+                  <button
+                    type="button"
+                    className="photo-edit__remove"
+                    aria-label="이 사진 빼기"
+                    onClick={() => {
+                      URL.revokeObjectURL(photo.previewUrl)
+                      setPending((prev) => prev.filter((p) => p.key !== photo.key))
+                    }}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {keptPhotos.filter((p) => !removedIds.includes(p.id)).length + pending.length < MAX_PHOTOS && (
+              <>
+                <input
+                  ref={fileInput}
+                  id="review-photos"
+                  className="visually-hidden"
+                  type="file"
+                  accept="image/*,.heic,.heif"
+                  multiple
+                  disabled={preparing || saving}
+                  onChange={(e) => void addFiles(e.target.files)}
+                />
+                <label htmlFor="review-photos" className="btn btn--small">
+                  {preparing ? '사진 준비 중…' : '사진 추가'}
+                </label>
+              </>
+            )}
+            <p className="card__meta">
+              사진은 최대 {MAX_PHOTOS}장 · 올릴 때 위치 정보는 지워져요.
+            </p>
+          </div>
           {formError && (
             <p className="notice notice--error" role="alert">
               {formError}
@@ -170,7 +317,7 @@ export default function ReviewSection({ bakeryId, user, onLogin, onChanged }: Pr
             <button type="submit" className="btn btn--small btn--primary" disabled={saving}>
               {saving ? '저장 중…' : '저장'}
             </button>
-            <button type="button" className="btn btn--small" disabled={saving} onClick={() => setEditing(false)}>
+            <button type="button" className="btn btn--small" disabled={saving} onClick={cancelEdit}>
               취소
             </button>
           </div>
@@ -202,6 +349,22 @@ export default function ReviewSection({ bakeryId, user, onLogin, onChanged }: Pr
               <span className="card__meta">{new Date(review.createdAt).toLocaleDateString('ko-KR')}</span>
             </div>
             {review.content && <p className="review__content">{review.content}</p>}
+            {review.photos.length > 0 && (
+              <ul className="plain review__photos">
+                {review.photos.map((photo, index) => (
+                  <li key={photo.id}>
+                    <button
+                      type="button"
+                      className="review__photo"
+                      aria-label={`${review.nickname}님의 사진 ${index + 1} 크게 보기`}
+                      onClick={() => setLightbox({ photo, alt: `${review.nickname}님의 리뷰 사진 ${index + 1}` })}
+                    >
+                      <img src={photo.thumbUrl} alt="" loading="lazy" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             {review.mine && !editing && (
               <div className="detail__links">
                 <button type="button" className="btn btn--small" onClick={startEdit}>
@@ -236,6 +399,7 @@ export default function ReviewSection({ bakeryId, user, onLogin, onChanged }: Pr
           {loadingMore ? '불러오는 중…' : '리뷰 더 보기'}
         </button>
       )}
+      {lightbox && <PhotoLightbox photo={lightbox.photo} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
     </section>
   )
 }
