@@ -51,7 +51,7 @@ async function requestJson<T>(url: string, init: RequestInit): Promise<T> {
   return (await res.json()) as T
 }
 
-function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+export function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   return requestJson<T>(url, { signal, headers: { Accept: 'application/json' } })
 }
 
@@ -91,7 +91,7 @@ async function csrfHeaders(signal?: AbortSignal): Promise<Record<string, string>
   return headers
 }
 
-async function sendJson<T>(method: 'POST' | 'PUT' | 'DELETE', url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+export async function sendJson<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const headers = await csrfHeaders(signal)
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   return requestJson<T>(url, { method, signal, headers, body: body === undefined ? undefined : JSON.stringify(body) })
