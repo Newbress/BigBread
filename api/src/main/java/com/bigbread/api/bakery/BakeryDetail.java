@@ -15,6 +15,8 @@ public record BakeryDetail(
         String phone,
         Object openingHours,
         double popularityScore,
+        Double ratingAvg,
+        int reviewCount,
         Links links,
         List<Bread> breads,
         List<SourceLink> sourceLinks) {

@@ -3,6 +3,7 @@ package com.bigbread.api.user;
 import com.bigbread.api.bakery.BakeryQueryService;
 import com.bigbread.api.bakery.BakerySummary;
 import com.bigbread.api.common.ApiException;
+import com.bigbread.api.review.BakeryStats;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -23,10 +24,12 @@ public class FavoriteService {
 
     private final JdbcClient jdbc;
     private final BakeryQueryService bakeries;
+    private final BakeryStats stats;
 
-    public FavoriteService(JdbcClient jdbc, BakeryQueryService bakeries) {
+    public FavoriteService(JdbcClient jdbc, BakeryQueryService bakeries, BakeryStats stats) {
         this.jdbc = jdbc;
         this.bakeries = bakeries;
+        this.stats = stats;
     }
 
     /** 최근에 담은 순서. */
@@ -56,13 +59,20 @@ public class FavoriteService {
         if (count >= MAX_FAVORITES) {
             throw ApiException.badRequest("즐겨찾기는 최대 " + MAX_FAVORITES + "곳까지 담을 수 있어요.");
         }
-        jdbc.sql("INSERT INTO favorite (user_id, bakery_id) VALUES (:userId, :bakeryId) ON CONFLICT DO NOTHING")
+        int added = jdbc.sql("INSERT INTO favorite (user_id, bakery_id) VALUES (:userId, :bakeryId) ON CONFLICT DO NOTHING")
                 .param("userId", userId).param("bakeryId", bakeryId).update();
+        if (added > 0) {
+            stats.recalculate(bakeryId);
+        }
     }
 
     /** 담겨 있지 않아도 오류 없이 끝난다 (멱등). */
+    @Transactional
     public void remove(long userId, long bakeryId) {
-        jdbc.sql("DELETE FROM favorite WHERE user_id = :userId AND bakery_id = :bakeryId")
+        int removed = jdbc.sql("DELETE FROM favorite WHERE user_id = :userId AND bakery_id = :bakeryId")
                 .param("userId", userId).param("bakeryId", bakeryId).update();
+        if (removed > 0) {
+            stats.recalculate(bakeryId);
+        }
     }
 }

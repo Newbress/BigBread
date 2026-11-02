@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { BakerySummary } from '../api/types.ts'
-import { formatDistance } from '../lib/format.ts'
+import { formatDistance, formatRating } from '../lib/format.ts'
 import FavoriteButton from './FavoriteButton.tsx'
 
 type Props = {
@@ -66,6 +66,14 @@ export function BakeryListItem({
               <span className="badge">{formatDistance(bakery.distanceMeters)}</span>
             )}
           </span>
+          {bakery.reviewCount > 0 && (
+            <span className="card__meta">
+              <span className="stars" aria-hidden="true">
+                ★
+              </span>{' '}
+              {formatRating(bakery.ratingAvg, bakery.reviewCount)}
+            </span>
+          )}
           <span className="card__meta">
             {bakery.district.name}
             {bakery.roadAddress ? ` · ${bakery.roadAddress}` : ''}

@@ -3,6 +3,7 @@ package com.bigbread.api.user;
 import com.bigbread.api.bakery.BakeryQueryService;
 import com.bigbread.api.bakery.BakerySummary;
 import com.bigbread.api.common.ApiException;
+import com.bigbread.api.review.BakeryStats;
 import com.bigbread.api.route.RouteOrder;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
@@ -34,10 +35,12 @@ public class CourseService {
 
     private final JdbcClient jdbc;
     private final BakeryQueryService bakeries;
+    private final BakeryStats stats;
 
-    public CourseService(JdbcClient jdbc, BakeryQueryService bakeries) {
+    public CourseService(JdbcClient jdbc, BakeryQueryService bakeries, BakeryStats stats) {
         this.jdbc = jdbc;
         this.bakeries = bakeries;
+        this.stats = stats;
     }
 
     @Transactional
@@ -69,6 +72,7 @@ public class CourseService {
             jdbc.sql("INSERT INTO course_stop (course_id, seq, bakery_id) VALUES (:courseId, :seq, :bakeryId)")
                     .param("courseId", courseId).param("seq", i + 1).param("bakeryId", bakeryIds.get(i)).update();
         }
+        stats.recalculate(bakeryIds);
         return get(userId, courseId).orElseThrow();
     }
 
@@ -132,8 +136,17 @@ public class CourseService {
     /** @return 지웠으면 true, 내 코스가 아니면 false */
     @Transactional
     public boolean delete(long userId, long courseId) {
-        return jdbc.sql("DELETE FROM course WHERE id = :id AND user_id = :userId")
+        List<Long> bakeryIds = jdbc.sql("""
+                        SELECT s.bakery_id FROM course_stop s JOIN course c ON c.id = s.course_id
+                         WHERE c.id = :id AND c.user_id = :userId
+                        """)
+                .param("id", courseId).param("userId", userId).query(Long.class).list();
+        boolean deleted = jdbc.sql("DELETE FROM course WHERE id = :id AND user_id = :userId")
                 .param("id", courseId).param("userId", userId).update() > 0;
+        if (deleted) {
+            stats.recalculate(bakeryIds);
+        }
+        return deleted;
     }
 
     private Map<Long, BakerySummary> summariesById(List<Long> ids) {

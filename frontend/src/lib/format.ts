@@ -69,3 +69,9 @@ export function formatDuration(minutes: number): string {
   const rest = minutes % 60
   return rest === 0 ? `${hours}시간` : `${hours}시간 ${rest}분`
 }
+
+/** 4.5 (12) 형태. 리뷰가 없으면 빈 문자열. */
+export function formatRating(avg: number | null | undefined, count: number): string {
+  if (avg == null || count <= 0) return ''
+  return `${avg.toFixed(1)} (${count})`
+}

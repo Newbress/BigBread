@@ -45,7 +45,8 @@ export default function App() {
     () => ({ district, location: geo.location, radius: geo.location ? radius : null, sort }),
     [district, geo.location, radius, sort],
   )
-  const { data, loading, error } = useBakeries(params)
+  const [listVersion, setListVersion] = useState(0)
+  const { data, loading, error } = useBakeries(params, listVersion)
   const items = useMemo(() => data?.items ?? [], [data])
   const route = useRoute(geo.location)
   const favorites = useFavorites(auth.user)
@@ -215,6 +216,9 @@ export default function App() {
               onToggleBasket={detailSummary ? () => route.toggle(detailSummary) : undefined}
               isFavorite={favorites.ids.has(detailId)}
               onToggleFavorite={detailSummary ? () => toggleFavorite(detailSummary) : undefined}
+              user={auth.user}
+              onLogin={() => setLoginOpen(true)}
+              onReviewsChanged={() => setListVersion((n) => n + 1)}
             />
           ) : view === 'favorites' ? (
             <FavoritesPanel

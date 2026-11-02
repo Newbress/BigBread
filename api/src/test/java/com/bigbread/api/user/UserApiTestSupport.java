@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest(properties = "bigbread.kakao.rest-api-key=")
 @AutoConfigureMockMvc
 @Transactional
-abstract class UserApiTestSupport {
+public abstract class UserApiTestSupport {
 
     private static final AtomicInteger SEQ = new AtomicInteger();
 
