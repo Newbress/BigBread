@@ -141,6 +141,7 @@ export default function App() {
           error={auth.error}
           onLogin={auth.login}
           onLogout={auth.logout}
+          onAccountDeleted={auth.forgetUser}
           loginOpen={loginOpen}
           onLoginOpenChange={setLoginOpen}
         />

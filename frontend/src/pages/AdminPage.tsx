@@ -32,6 +32,7 @@ export default function AdminPage() {
       error={auth.error}
       onLogin={auth.login}
       onLogout={() => void auth.logout()}
+      onAccountDeleted={auth.forgetUser}
       loginOpen={loginOpen}
       onLoginOpenChange={setLoginOpen}
     />
