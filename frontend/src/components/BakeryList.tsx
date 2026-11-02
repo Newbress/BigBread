@@ -16,6 +16,8 @@ type Props = {
   onToggleBasket: (bakery: BakerySummary) => void
   favoriteIds: ReadonlySet<number>
   onToggleFavorite: (bakery: BakerySummary) => void
+  /** 찾는 빵집이 없을 때 제보 창을 연다 */
+  onReportNew: () => void
 }
 
 type ItemProps = {
@@ -119,6 +121,7 @@ export default function BakeryList({
   onToggleBasket,
   favoriteIds,
   onToggleFavorite,
+  onReportNew,
 }: Props) {
   return (
     <section aria-label="빵집 목록" aria-busy={loading}>
@@ -156,6 +159,13 @@ export default function BakeryList({
           />
         ))}
       </ol>
+
+      <p className="list__footer">
+        찾는 빵집이 없나요?{' '}
+        <button type="button" className="btn btn--link" onClick={onReportNew}>
+          빵집 제보하기
+        </button>
+      </p>
     </section>
   )
 }
