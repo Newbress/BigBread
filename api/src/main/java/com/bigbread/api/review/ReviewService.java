@@ -1,5 +1,6 @@
 package com.bigbread.api.review;
 
+import com.bigbread.api.auth.AccountStatus;
 import com.bigbread.api.bakery.BakeryQueryService;
 import com.bigbread.api.bakery.BakerySummary;
 import com.bigbread.api.common.ApiException;
@@ -42,9 +43,11 @@ public class ReviewService {
     private final BakeryStats stats;
     private final PhotoService photos;
     private final ContentReportService reports;
+    private final AccountStatus accountStatus;
 
     public ReviewService(JdbcClient jdbc, BakeryQueryService bakeries, BakeryStats stats, PhotoService photos,
-                         ContentReportService reports) {
+                         ContentReportService reports, AccountStatus accountStatus) {
+        this.accountStatus = accountStatus;
         this.photos = photos;
         this.reports = reports;
         this.jdbc = jdbc;
@@ -112,6 +115,7 @@ public class ReviewService {
     /** 처음이면 만들고, 이미 있으면 수정한다 (멱등). 수정하면 숨김 상태는 그대로 유지한다. */
     @Transactional
     public Item save(long userId, long bakeryId, int rating, String content) {
+        accountStatus.requireActive(userId);
         requireVisibleBakery(bakeryId);
         if (rating < 1 || rating > 5) {
             throw ApiException.badRequest("평점은 1~5점이에요.");

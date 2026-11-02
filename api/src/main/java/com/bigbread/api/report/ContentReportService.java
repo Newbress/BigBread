@@ -1,5 +1,6 @@
 package com.bigbread.api.report;
 
+import com.bigbread.api.auth.AccountStatus;
 import com.bigbread.api.common.ApiException;
 import com.bigbread.api.review.BakeryStats;
 import java.util.Collection;
@@ -27,14 +28,17 @@ public class ContentReportService {
 
     private final JdbcClient jdbc;
     private final BakeryStats stats;
+    private final AccountStatus accountStatus;
 
-    public ContentReportService(JdbcClient jdbc, BakeryStats stats) {
+    public ContentReportService(JdbcClient jdbc, BakeryStats stats, AccountStatus accountStatus) {
+        this.accountStatus = accountStatus;
         this.jdbc = jdbc;
         this.stats = stats;
     }
 
     @Transactional
     public void report(long reporterId, TargetType type, long targetId, Reason reason, String detail) {
+        accountStatus.requireActive(reporterId);
         Target target = findVisibleTarget(type, targetId)
                 .orElseThrow(() -> ApiException.notFound("이미 삭제됐거나 볼 수 없는 " + label(type) + "이에요."));
         if (target.authorId() == reporterId) {
