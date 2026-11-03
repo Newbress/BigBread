@@ -3,6 +3,7 @@ package com.bigbread.api.report;
 import com.bigbread.api.auth.AccountStatus;
 import com.bigbread.api.common.ApiException;
 import com.bigbread.api.review.BakeryStats;
+import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -71,6 +72,37 @@ public class ContentReportService {
         if (pending >= HIDE_THRESHOLD) {
             hide(type, targetId, target.bakeryId());
         }
+    }
+
+    /** 내가 한 신고의 한 줄. 어떤 글인지는 알 수 있게 하되 작성자는 알려주지 않는다. */
+    public record Mine(long id, TargetType targetType, Reason reason, String detail, String status, String bakeryName,
+                       String excerpt, boolean targetGone, OffsetDateTime createdAt, OffsetDateTime handledAt) {
+    }
+
+    /** 최근에 한 순서. 처리 전 신고는 PENDING, 문제없음은 DISMISSED, 숨김·삭제 등 조치는 ACTIONED. */
+    public List<Mine> mine(long reporterId) {
+        return jdbc.sql("""
+                        SELECT c.id, c.target_type, c.reason, c.detail, c.status, c.created_at, c.handled_at,
+                               b.name AS bakery_name,
+                               CASE WHEN c.target_type = 'REVIEW' THEN r.content ELSE NULL END AS excerpt,
+                               (r.id IS NULL) AS gone
+                          FROM content_report c
+                          LEFT JOIN review_photo p ON c.target_type = 'PHOTO' AND p.id = c.target_id
+                          LEFT JOIN review r ON r.id = CASE WHEN c.target_type = 'REVIEW' THEN c.target_id ELSE p.review_id END
+                          LEFT JOIN bakery b ON b.id = r.bakery_id
+                         WHERE c.reporter_id = :u
+                         ORDER BY c.created_at DESC, c.id DESC LIMIT 100
+                        """)
+                .param("u", reporterId)
+                .query((rs, n) -> {
+                    String content = rs.getString("excerpt");
+                    String excerpt = content == null ? null : (content.length() > 60 ? content.substring(0, 60) + "…" : content);
+                    return new Mine(rs.getLong("id"), TargetType.valueOf(rs.getString("target_type")),
+                            Reason.valueOf(rs.getString("reason")), rs.getString("detail"), rs.getString("status"),
+                            rs.getString("bakery_name"), excerpt, rs.getBoolean("gone"),
+                            rs.getObject("created_at", OffsetDateTime.class), rs.getObject("handled_at", OffsetDateTime.class));
+                })
+                .list();
     }
 
     /** 리뷰·사진이 (작성자 삭제 등으로) 사라졌을 때, 처리 전 신고를 처리됨으로 닫는다. */

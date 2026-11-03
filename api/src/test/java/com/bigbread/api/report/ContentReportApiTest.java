@@ -133,4 +133,34 @@ class ContentReportApiTest extends UserApiTestSupport {
         }
         report(reporter, "REVIEW", review, "SPAM", null).andExpect(status().isTooManyRequests());
     }
+
+    @Test
+    void 내_신고_내역은_처리_상태와_대상을_보여주고_남의_신고는_안_보인다() throws Exception {
+        long author = newUser("작성자");
+        long me = newUser("신고자");
+        long other = newUser("다른신고자");
+        long bakery = newBakery("내역 빵집", "ACTIVE");
+        long review = review(author, bakery);
+        report(me, "REVIEW", review, "SPAM", "광고예요").andExpect(status().isCreated());
+        report(other, "REVIEW", review, "ABUSE", null).andExpect(status().isCreated());
+
+        mvc.perform(get("/api/my/reports").with(as(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].targetType").value("REVIEW"))
+                .andExpect(jsonPath("$[0].reason").value("SPAM"))
+                .andExpect(jsonPath("$[0].status").value("PENDING"))
+                .andExpect(jsonPath("$[0].bakeryName").value("내역 빵집"))
+                .andExpect(jsonPath("$[0].excerpt").value("리뷰"))
+                .andExpect(jsonPath("$[0].targetGone").value(false))
+                .andExpect(jsonPath("$[0].authorId").doesNotExist())
+                .andExpect(jsonPath("$[0].authorNickname").doesNotExist());
+
+        // 처리되면 상태가 바뀌고, 글이 지워지면 사라졌다고 나온다
+        jdbc.update("UPDATE content_report SET status = 'DISMISSED', handled_at = now() WHERE reporter_id = ?", me);
+        mvc.perform(get("/api/my/reports").with(as(me))).andExpect(jsonPath("$[0].status").value("DISMISSED"));
+        mvc.perform(withCsrf(delete("/api/my/reviews/{id}", bakery)).with(as(author))).andExpect(status().isNoContent());
+        mvc.perform(get("/api/my/reports").with(as(me))).andExpect(jsonPath("$[0].targetGone").value(true));
+        mvc.perform(get("/api/my/reports")).andExpect(status().isUnauthorized());
+    }
 }

@@ -157,4 +157,60 @@ class AdminBakeryReportApiTest extends AdminApiTestBase {
                 .andExpect(jsonPath("$.items[0].adminNickname").value("운영자"))
                 .andExpect(jsonPath("$.items[0].detail").value("중복"));
     }
+
+    @Test
+    void 위치_후보를_검색해서_고르면_그_위치로_등록된다() throws Exception {
+        long admin = newAdmin("운영자");
+        long report = newReport(newUser("제보자"), "NEW", "후보 빵집", "대전 유성구 어딘가", null, null);
+        when(lookup.search("후보 빵집 대전 유성구")).thenReturn(java.util.List.of(
+                new PlaceLookup.Candidate(new PlaceLookup.Place("p1", "후보 빵집 본점", "대전 유성구 대학로 1", "대전 유성구 궁동 1", 36.36, 127.35, "042-1"), "음식점 > 제과,베이커리")));
+
+        adminGet(admin, "/api/admin/bakery-reports/place-search?query=후보 빵집 대전 유성구")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].place.name").value("후보 빵집 본점"))
+                .andExpect(jsonPath("$[0].category").value("음식점 > 제과,베이커리"));
+        adminGet(admin, "/api/admin/bakery-reports/place-search?query=a").andExpect(status().isBadRequest());
+
+        String kakaoId = "pick" + System.nanoTime();
+        adminPost(admin, "/api/admin/bakery-reports/{id}/approve",
+                "{\"place\":{\"kakaoPlaceId\":\"" + kakaoId + "\",\"roadAddress\":\"대전 유성구 대학로 1\",\"jibunAddress\":\"대전 유성구 궁동 1\","
+                        + "\"lat\":36.36,\"lng\":127.35,\"phone\":\"042-1\"}}", report)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("APPROVED"));
+        long bakery = jdbc.queryForObject("SELECT bakery_id FROM bakery_report WHERE id = ?", Long.class, report);
+        assertThat(q("SELECT kakao_place_id FROM bakery WHERE id = ?", bakery)).isEqualTo(kakaoId);
+        mvc.perform(get("/api/bakeries/{id}", bakery)).andExpect(jsonPath("$.district.code").value("YUSEONG"));
+    }
+
+    @Test
+    void 카카오에_없는_새_가게는_주소로_찾은_위치로_등록할_수_있다() throws Exception {
+        long admin = newAdmin("운영자");
+        long report = newReport(newUser("제보자"), "NEW", "아직 없는 빵집", "대전 대덕구 신탄진로 1", null, null);
+        adminPost(admin, "/api/admin/bakery-reports/{id}/approve",
+                "{\"place\":{\"kakaoPlaceId\":\"\",\"roadAddress\":\"대전 대덕구 신탄진로 1\",\"jibunAddress\":\"\","
+                        + "\"lat\":36.45,\"lng\":127.42}}", report).andExpect(status().isOk());
+        long bakery = jdbc.queryForObject("SELECT bakery_id FROM bakery_report WHERE id = ?", Long.class, report);
+        assertThat(q("SELECT kakao_place_id FROM bakery WHERE id = ?", bakery)).isNull();
+        mvc.perform(get("/api/bakeries/{id}", bakery)).andExpect(jsonPath("$.district.code").value("DAEDEOK"));
+    }
+
+    @Test
+    void 고른_위치가_대전_밖이거나_좌표가_이상하면_거절한다() throws Exception {
+        long admin = newAdmin("운영자");
+        long report = newReport(newUser("제보자"), "NEW", "밖의 빵집", "서울", null, null);
+        adminPost(admin, "/api/admin/bakery-reports/{id}/approve",
+                "{\"place\":{\"jibunAddress\":\"서울 강남구 역삼동 1\",\"lat\":37.5,\"lng\":127.0}}", report).andExpect(status().isBadRequest());
+        adminPost(admin, "/api/admin/bakery-reports/{id}/approve",
+                "{\"place\":{\"jibunAddress\":\"대전 서구 둔산동 1\",\"lat\":1,\"lng\":2}}", report).andExpect(status().isBadRequest());
+        adminPost(admin, "/api/admin/bakery-reports/{id}/approve", "{\"place\":{\"jibunAddress\":\"대전 서구 둔산동 1\"}}", report)
+                .andExpect(status().isBadRequest());
+        assertThat(q("SELECT status FROM bakery_report WHERE id = ?", report)).isEqualTo("PENDING");
+
+        // 이미 등록된 카카오 장소는 중복 등록하지 않는다
+        long first = newReport(newUser("제보자2"), "NEW", "중복 빵집", "대전 서구 1", null, null);
+        String body = "{\"place\":{\"kakaoPlaceId\":\"dup-" + first + "\",\"jibunAddress\":\"대전 서구 둔산동 1\",\"lat\":36.35,\"lng\":127.38}}";
+        adminPost(admin, "/api/admin/bakery-reports/{id}/approve", body, first).andExpect(status().isOk());
+        long second = newReport(newUser("제보자3"), "NEW", "중복 빵집2", "대전 서구 2", null, null);
+        adminPost(admin, "/api/admin/bakery-reports/{id}/approve", body.replace("dup-" + first, "dup-" + first), second).andExpect(status().isConflict());
+    }
 }
