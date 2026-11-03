@@ -1,17 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { changePassword, fetchAccountInfo, withdrawAccount } from '../../api/client.ts'
-import type { AccountInfo, User } from '../../api/types.ts'
+import type { AccountInfo } from '../../api/types.ts'
 import { PASSWORD_HINT, passwordError } from '../../lib/authRules.ts'
 import { ConfirmButton } from '../admin/common.tsx'
-import FormField from './FormField.tsx'
-import PasswordInput from './PasswordInput.tsx'
-
-type Props = {
-  user: User
-  onClose: () => void
-  /** 탈퇴가 끝나고 안내를 닫았을 때 */
-  onDeleted: () => void
-}
+import FormField from '../auth/FormField.tsx'
+import PasswordInput from '../auth/PasswordInput.tsx'
 
 const PROVIDER_LABEL: Record<string, string> = { KAKAO: '카카오', NAVER: '네이버', GOOGLE: '구글' }
 
@@ -140,17 +133,11 @@ function WithdrawSection({ info, onDone }: { info: AccountInfo; onDone: () => vo
   )
 }
 
-/** 내 계정 창: 로그인 방법 확인, 비밀번호 변경(자체 가입 계정), 회원 탈퇴. */
-export default function AccountDialog({ user, onClose, onDeleted }: Props) {
-  const ref = useRef<HTMLDialogElement>(null)
+
+/** 계정 설정: 로그인 방법 확인, 비밀번호 변경(자체 가입 계정), 회원 탈퇴. 탈퇴가 끝나면 onDeleted를 부른다. */
+export default function AccountSettings({ nickname, onDeleted }: { nickname: string; onDeleted: () => void }) {
   const [info, setInfo] = useState<AccountInfo | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [deleted, setDeleted] = useState(false)
-
-  useEffect(() => {
-    const dialog = ref.current
-    if (dialog && !dialog.open) dialog.showModal()
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -163,53 +150,27 @@ export default function AccountDialog({ user, onClose, onDeleted }: Props) {
   }, [])
 
   return (
-    <dialog
-      ref={ref}
-      className="login-dialog report-dialog"
-      aria-labelledby="account-title"
-      onClose={deleted ? onDeleted : onClose}
-    >
-      <div className="report-dialog__body">
-        <button type="button" className="login-dialog__close" aria-label="닫기" onClick={() => ref.current?.close()}>
-          ×
-        </button>
-        <h2 id="account-title">내 계정</h2>
-        {deleted ? (
-          <>
-            <p className="notice" role="status">
-              탈퇴가 끝났어요. 그동안 이용해 주셔서 감사합니다.
-            </p>
-            <button type="button" className="btn btn--primary" onClick={() => ref.current?.close()}>
-              확인
-            </button>
-          </>
-        ) : (
-          <>
-            <p>
-              <strong>{user.nickname}</strong>
-              {info && (
-                <span className="card__meta">
-                  {' '}
-                  ·{' '}
-                  {info.hasPassword
-                    ? `아이디 ${info.loginId}`
-                    : `${info.providers.map((p) => PROVIDER_LABEL[p] ?? p).join(', ')} 로그인`}
-                </span>
-              )}
-            </p>
-            {loadError && (
-              <p className="notice notice--error" role="alert">
-                {loadError}
-              </p>
-            )}
-            {info && info.hasPassword && <PasswordSection info={info} />}
-            {info && !info.hasPassword && (
-              <p className="card__meta">소셜 로그인 계정은 비밀번호가 없어요. 로그인 정보는 해당 서비스에서 관리해 주세요.</p>
-            )}
-            {info && <WithdrawSection info={info} onDone={() => setDeleted(true)} />}
-          </>
+    <section aria-labelledby="account-title">
+      <h2 id="account-title">계정 설정</h2>
+      <p>
+        <strong>{nickname}</strong>
+        {info && (
+          <span className="card__meta">
+            {' '}
+            · {info.hasPassword ? `아이디 ${info.loginId}` : `${info.providers.map((p) => PROVIDER_LABEL[p] ?? p).join(', ')} 로그인`}
+          </span>
         )}
-      </div>
-    </dialog>
+      </p>
+      {loadError && (
+        <p className="notice notice--error" role="alert">
+          {loadError}
+        </p>
+      )}
+      {info && info.hasPassword && <PasswordSection info={info} />}
+      {info && !info.hasPassword && (
+        <p className="card__meta">소셜 로그인 계정은 비밀번호가 없어요. 로그인 정보는 해당 서비스에서 관리해 주세요.</p>
+      )}
+      {info && <WithdrawSection info={info} onDone={onDeleted} />}
+    </section>
   )
 }

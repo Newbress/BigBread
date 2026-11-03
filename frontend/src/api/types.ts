@@ -221,3 +221,28 @@ export type BakeryReport = {
 }
 
 export type AccountInfo = { hasPassword: boolean; loginId: string | null; providers: string[] }
+
+export type MyReview = {
+  id: number
+  bakery: BakerySummary
+  rating: number
+  content: string | null
+  photos: ReviewPhoto[]
+  hidden: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export type MyContentReport = {
+  id: number
+  targetType: ReportTarget
+  reason: ReportReason
+  detail: string | null
+  /** PENDING 확인 중 / DISMISSED 문제없음 / ACTIONED 조치됨 */
+  status: 'PENDING' | 'DISMISSED' | 'ACTIONED'
+  bakeryName: string | null
+  excerpt: string | null
+  targetGone: boolean
+  createdAt: string
+  handledAt: string | null
+}

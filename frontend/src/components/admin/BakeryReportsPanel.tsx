@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { approveBakeryReport, fetchBakeryReports, rejectBakeryReport } from '../../api/admin.ts'
-import type { AdminBakeryReport } from '../../api/adminTypes.ts'
+import { approveBakeryReport, fetchBakeryReports, rejectBakeryReport, searchPlaces } from '../../api/admin.ts'
+import type { AdminBakeryReport, PlaceCandidate } from '../../api/adminTypes.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
 import { REPORT_KIND_LABEL, REPORT_STATUS_LABEL } from '../../lib/adminLabels.ts'
 import { formatDateTime } from '../../lib/format.ts'
@@ -27,6 +27,10 @@ function ReportCard({ report, onDone }: { report: AdminBakeryReport; onDone: () 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [manualOpen, setManualOpen] = useState(false)
+  const [placeQuery, setPlaceQuery] = useState(`${report.name ?? ''} ${report.address ?? ''}`.trim())
+  const [candidates, setCandidates] = useState<PlaceCandidate[] | null>(null)
+  const [chosen, setChosen] = useState<number | null>(null)
+  const [searching, setSearching] = useState(false)
   const [lat, setLat] = useState('')
   const [lng, setLng] = useState('')
   const [district, setDistrict] = useState('YUSEONG')
@@ -45,15 +49,32 @@ function ReportCard({ report, onDone }: { report: AdminBakeryReport; onDone: () 
     } catch (e) {
       const message = e instanceof Error ? e.message : '처리하지 못했어요.'
       setError(message)
-      if (message.includes('직접')) setManualOpen(true)
+      // 카카오에서 위치를 자동으로 못 찾았으면 바로 후보 검색을 보여 준다.
+      if (message.includes('찾지 못했어요')) void findPlaces()
     } finally {
       setBusy(false)
     }
   }
 
+  async function findPlaces() {
+    setSearching(true)
+    try {
+      const found = await searchPlaces(placeQuery.trim())
+      setCandidates(found)
+      setChosen(found.length > 0 ? 0 : null)
+    } catch (e) {
+      setCandidates([])
+      setError(e instanceof Error ? e.message : '검색하지 못했어요.')
+    } finally {
+      setSearching(false)
+    }
+  }
+
   function approve() {
     const body: Parameters<typeof approveBakeryReport>[1] = { adminNote: note }
-    if (report.kind === 'NEW' && manualOpen && lat.trim() !== '' && lng.trim() !== '') {
+    if (report.kind === 'NEW' && candidates && chosen !== null) {
+      body.place = candidates[chosen].place
+    } else if (report.kind === 'NEW' && manualOpen && lat.trim() !== '' && lng.trim() !== '') {
       body.lat = Number(lat)
       body.lng = Number(lng)
       body.districtCode = district
@@ -96,29 +117,70 @@ function ReportCard({ report, onDone }: { report: AdminBakeryReport; onDone: () 
       {report.status === 'PENDING' && (
         <div className="admin-actions">
           {report.kind === 'NEW' && (
-            <details open={manualOpen} onToggle={(e) => setManualOpen(e.currentTarget.open)}>
-              <summary>위치를 직접 넣기 (카카오에서 못 찾을 때)</summary>
+            <div className="admin-place">
+              <p className="card__meta">위치는 등록할 때 카카오에서 자동으로 찾아요. 못 찾으면 아래에서 검색해서 고를 수 있어요.</p>
               <div className="admin-row">
-                <label>
-                  위도
-                  <input inputMode="decimal" value={lat} placeholder="36.35" onChange={(e) => setLat(e.target.value)} />
-                </label>
-                <label>
-                  경도
-                  <input inputMode="decimal" value={lng} placeholder="127.38" onChange={(e) => setLng(e.target.value)} />
-                </label>
-                <label>
-                  구
-                  <select value={district} onChange={(e) => setDistrict(e.target.value)}>
-                    {DISTRICTS.map((d) => (
-                      <option key={d.code} value={d.code}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <input
+                  aria-label="위치 검색어"
+                  className="admin-grow"
+                  value={placeQuery}
+                  placeholder="가게 이름이나 주소"
+                  onChange={(e) => setPlaceQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      void findPlaces()
+                    }
+                  }}
+                />
+                <button type="button" className="btn btn--small" disabled={searching || placeQuery.trim().length < 2} onClick={() => void findPlaces()}>
+                  {searching ? '찾는 중…' : '카카오에서 검색'}
+                </button>
               </div>
-            </details>
+              {candidates && candidates.length === 0 && (
+                <p className="notice">검색 결과가 없어요. 이름 대신 주소로 검색하거나, 아래 좌표 입력을 써 주세요.</p>
+              )}
+              {candidates && candidates.length > 0 && (
+                <ul className="plain admin-candidates" role="radiogroup" aria-label="위치 후보">
+                  {candidates.map((c, i) => (
+                    <li key={`${c.place.kakaoPlaceId}-${i}`}>
+                      <label className={chosen === i ? 'admin-candidate admin-candidate--on' : 'admin-candidate'}>
+                        <input type="radio" name={`place-${report.id}`} checked={chosen === i} onChange={() => setChosen(i)} />
+                        <span>
+                          <strong>{c.place.name || '주소로 찾은 위치'}</strong>{' '}
+                          <span className="card__meta">{c.category}</span>
+                          <br />
+                          <span className="card__meta">{c.place.roadAddress || c.place.jibunAddress}</span>
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <details open={manualOpen} onToggle={(e) => setManualOpen(e.currentTarget.open)}>
+                <summary>그래도 안 되면 좌표로 직접 입력</summary>
+                <div className="admin-row">
+                  <label>
+                    위도
+                    <input inputMode="decimal" value={lat} placeholder="36.35" onChange={(e) => setLat(e.target.value)} />
+                  </label>
+                  <label>
+                    경도
+                    <input inputMode="decimal" value={lng} placeholder="127.38" onChange={(e) => setLng(e.target.value)} />
+                  </label>
+                  <label>
+                    구
+                    <select value={district} onChange={(e) => setDistrict(e.target.value)}>
+                      {DISTRICTS.map((d) => (
+                        <option key={d.code} value={d.code}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </details>
+            </div>
           )}
           {report.kind === 'WRONG_INFO' && (
             <>

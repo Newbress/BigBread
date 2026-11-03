@@ -126,6 +126,10 @@ public class AdminBakeryReportService {
             }
             lat = choice.lat();
             lng = choice.lng();
+            requireMax(choice.kakaoPlaceId(), 30, "카카오 장소 ID");
+            requireMax(choice.phone(), 30, "전화번호");
+            requireMax(choice.roadAddress(), 255, "도로명 주소");
+            requireMax(choice.jibunAddress(), 255, "지번 주소");
             roadAddress = blankToNull(choice.roadAddress());
             jibunAddress = blankToNull(choice.jibunAddress()) != null ? choice.jibunAddress() : report.address();
             phone = blankToNull(choice.phone());
@@ -246,6 +250,12 @@ public class AdminBakeryReportService {
             throw ApiException.badRequest("안내 문구는 " + max + "자까지 쓸 수 있어요.");
         }
         return text;
+    }
+
+    private static void requireMax(String value, int max, String label) {
+        if (value != null && value.length() > max) {
+            throw ApiException.badRequest(label + " 값이 너무 길어요.");
+        }
     }
 
     private static String blankToNull(String value) {

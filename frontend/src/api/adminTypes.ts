@@ -26,7 +26,22 @@ export type AdminBakeryReport = {
   reviewedAt: string | null
 }
 
+export type PlaceChoice = {
+  /** 카카오 장소 ID. 주소로만 찾은 위치(카카오에 아직 없는 가게)는 빈 값 */
+  kakaoPlaceId: string
+  name: string
+  roadAddress: string
+  jibunAddress: string
+  lat: number
+  lng: number
+  phone: string
+}
+
+export type PlaceCandidate = { place: PlaceChoice; category: string }
+
 export type ApproveBody = {
+  /** 후보 목록에서 고른 위치 */
+  place?: PlaceChoice
   lat?: number
   lng?: number
   districtCode?: string

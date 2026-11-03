@@ -1378,3 +1378,197 @@ a.btn.btn--block {
 .account-section--danger h3 {
   color: var(--danger);
 }
+
+/* ── UX 다듬기 ─────────────────────────────────────── */
+
+/* 목록 스크롤: 필터는 한두 줄로 줄여 위에 붙이고, 아래로 부드럽게 흐려지게 해서 카드가 뚝 잘려 보이지 않게 한다. */
+.app__side {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  scroll-padding-top: 104px;
+  scrollbar-width: thin;
+}
+
+.filters {
+  gap: 8px;
+  padding: 8px 0 6px;
+}
+
+.filters::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 14px;
+  background: linear-gradient(var(--bg), transparent);
+  pointer-events: none;
+}
+
+.chips {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: none;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
+.toolbar {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.toolbar .btn {
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.toolbar .field {
+  gap: 4px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.toolbar .field select {
+  padding: 4px 6px;
+}
+
+/* 목록 한 줄: 카드와 담기·즐겨찾기 버튼이 하나의 상자 안에 들어간다. */
+.list__row {
+  align-items: center;
+  gap: 4px;
+  padding-right: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.list__row:hover {
+  border-color: var(--accent);
+}
+
+.list__row--selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.list__row .card,
+.list__row .card:hover,
+.list__row .card--selected {
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.list__row .list__actions {
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.list__row .list__actions .btn--small {
+  min-width: 46px;
+  height: 32px;
+  padding: 0 8px;
+  text-align: center;
+}
+
+/* 상세: 즐겨찾기·담기는 같은 크기 두 칸, 외부 이동 버튼은 같은 폭으로 한 줄 (JMT 리포트처럼) */
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.action-grid .btn,
+.action-grid .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: auto;
+  min-height: 42px;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+}
+
+.ext-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ext-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ext-btn--kakao {
+  background: #fff4c2;
+  color: #5a4600;
+}
+
+.ext-btn--naver {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ext-btn--instagram {
+  background: #fde7f3;
+  color: #9d174d;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ext-btn--kakao {
+    background: #4a3d0a;
+    color: #ffe680;
+  }
+
+  .ext-btn--naver {
+    background: #14391f;
+    color: #86efac;
+  }
+
+  .ext-btn--instagram {
+    background: #4a1530;
+    color: #f9a8d4;
+  }
+}
+
+/* 필터가 맨 위에 붙을 때 위쪽 여백으로 카드가 비쳐 보이지 않게, 위 여백은 탭 쪽에서 만든다. */
+.app__side {
+  padding-top: 0;
+}
+
+.app__side > .tabs:first-child {
+  margin-top: 12px;
+}
+
+.chips {
+  gap: 4px;
+}
+
+.chip {
+  padding: 5px 10px;
+  font-size: 0.9rem;
+}

@@ -206,6 +206,11 @@ class AdminBakeryReportApiTest extends AdminApiTestBase {
                 .andExpect(status().isBadRequest());
         assertThat(q("SELECT status FROM bakery_report WHERE id = ?", report)).isEqualTo("PENDING");
 
+        // 너무 긴 값은 500이 아니라 400으로 거절한다
+        adminPost(admin, "/api/admin/bakery-reports/{id}/approve",
+                "{\"place\":{\"kakaoPlaceId\":\"" + "9".repeat(40) + "\",\"jibunAddress\":\"대전 서구 둔산동 1\",\"lat\":36.35,\"lng\":127.38}}", report)
+                .andExpect(status().isBadRequest());
+
         // 이미 등록된 카카오 장소는 중복 등록하지 않는다
         long first = newReport(newUser("제보자2"), "NEW", "중복 빵집", "대전 서구 1", null, null);
         String body = "{\"place\":{\"kakaoPlaceId\":\"dup-" + first + "\",\"jibunAddress\":\"대전 서구 둔산동 1\",\"lat\":36.35,\"lng\":127.38}}";

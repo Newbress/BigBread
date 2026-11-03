@@ -8,6 +8,7 @@ import type {
   AdminUserDetail,
   AdminUserRow,
   ApproveBody,
+  PlaceCandidate,
   AuditEntry,
   ContentAction,
 } from './adminTypes.ts'
@@ -64,3 +65,7 @@ export const hideUserContent = (id: number, reason: string) =>
 
 export const fetchAuditLogs = (targetType: string, page: number, signal?: AbortSignal) =>
   getJson<PageResponse<AuditEntry>>(`/api/admin/audit-logs${qs({ targetType, page })}`, signal)
+
+/** 새 빵집 제보의 위치를 정할 후보를 카카오에서 찾는다. */
+export const searchPlaces = (query: string, signal?: AbortSignal) =>
+  getJson<PlaceCandidate[]>(`/api/admin/bakery-reports/place-search${qs({ query })}`, signal)
