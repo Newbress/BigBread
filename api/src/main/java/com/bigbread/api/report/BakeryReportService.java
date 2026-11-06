@@ -1,5 +1,6 @@
 package com.bigbread.api.report;
 
+import com.bigbread.api.auth.AccountStatus;
 import com.bigbread.api.common.ApiException;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -29,13 +30,16 @@ public class BakeryReportService {
     }
 
     private final JdbcClient jdbc;
+    private final AccountStatus accountStatus;
 
-    public BakeryReportService(JdbcClient jdbc) {
+    public BakeryReportService(JdbcClient jdbc, AccountStatus accountStatus) {
         this.jdbc = jdbc;
+        this.accountStatus = accountStatus;
     }
 
     @Transactional
     public View create(long userId, Request request) {
+        accountStatus.requireActive(userId);
         if (request.kind() == null) {
             throw ApiException.badRequest("제보 종류를 골라 주세요.");
         }

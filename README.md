@@ -273,6 +273,30 @@ curl -c jar -b jar -H "X-XSRF-TOKEN: <jar의 XSRF-TOKEN 값>" -H 'Content-Type: 
   - **서로 다른 3명이 신고하면(처리 전 신고 기준) 운영자가 확인할 때까지 자동으로 숨긴다**(`hidden_reason = REPORTS`). 숨겨진 리뷰는 목록과 평점·인기 점수 집계에서 빠지고, 작성자 본인에게는 "신고가 쌓여 잠시 숨겨졌어요" 안내가 보인다. 운영자가 기각하면 되살리는 처리는 관리자 기능에서 한다.
   - 작성자가 리뷰나 사진을 지우면 처리 전 신고는 자동으로 처리됨으로 닫힌다.
 
+## 관리자 API (`/api/admin/**`)
+
+관리자 화면(5단계)이 쓰는 API다. 로그인한 관리자만 쓸 수 있고(비로그인 401, 일반 사용자 403), **역할은 세션이 아니라 요청마다 DB의 `app_user.role`로 확인한다.** 그래서 DB에서 바꾸면 다시 로그인하지 않아도 바로 적용되고, 권한을 거두거나 계정을 정지하면 즉시 막힌다.
+
+```sql
+-- 관리자 지정 / 해제 (운영 DB에서 직접)
+UPDATE app_user SET role = 'ADMIN' WHERE id = 1;
+UPDATE app_user SET role = 'USER'  WHERE id = 1;
+```
+
+| 기능 | API |
+|---|---|
+| 처리할 일 요약 | `GET /api/admin/summary` |
+| 빵집 제보 | `GET /api/admin/bakery-reports?status=PENDING\|APPROVED\|REJECTED\|ALL`, `POST …/{id}/approve`, `POST …/{id}/reject` |
+| 리뷰·사진 신고 | `GET /api/admin/content-reports?status=PENDING\|HANDLED`, `POST /api/admin/content-reports/resolve` (`DISMISS` 문제없음 / `HIDE` 숨김 / `DELETE` 삭제 / `RESTORE` 숨김 해제), `GET /api/admin/photos/{id}[/thumb]` (숨겨진 사진 확인) |
+| 빵집 관리 | `GET /api/admin/bakeries?q=&status=`, `GET …/{id}`, `PATCH …/{id}` (`status`, `instagramUsername`, `openingHours`, `phone`) |
+| 사용자 관리 | `GET /api/admin/users?q=&suspended=`, `GET …/{id}`, `POST …/{id}/suspend`, `…/unsuspend`, `…/hide-content` |
+| 작업 기록 | `GET /api/admin/audit-logs?targetType=&targetId=` |
+
+- **제보 승인**: 새 빵집은 카카오 장소 검색(서버의 REST API 키)으로 위치·카카오 장소 ID·전화를 채워 `ACTIVE`로 등록한다. 못 찾거나 대전 밖이면 거절하고, 이때는 `lat`/`lng`/`districtCode`를 직접 넣어 승인한다. 폐업 제보는 빵집을 `CLOSED`로, 정보 오류 제보는 확인 처리(`applyInstagram`을 켜면 제보된 인스타 계정도 반영)한다. 반려는 사유가 필수이고 제보한 사람의 `내 제보 내역`에 보인다. 이미 처리된 제보는 409.
+- **신고 처리**: 신고 누적(3명)으로 자동 숨겨진 것은 `DISMISS`하면 되살아나고, 운영자가 직접 숨긴 것(`hidden_reason = ADMIN`)은 `RESTORE`로만 풀린다. 숨기거나 풀 때 리뷰의 평점·인기 점수가 다시 계산된다.
+- **사용자 정지**: 사유가 필수다. 정지된 사용자는 로그인과 조회는 되지만 리뷰·사진·제보·신고 작성은 403(사유 안내 포함)이다. 관리자와 자기 자신은 정지할 수 없다. 이메일은 `a**@example.com`처럼 가려서 보이고 이메일 전체가 일치할 때만 검색된다. 관리자 권한 변경과 강제 탈퇴는 하지 않는다(2차).
+- **작업 기록**: 위 변경은 모두 `admin_audit_log`에 누가·언제·무엇을 했는지 남는다. 기록은 읽기만 되고 고치거나 지우는 API가 없다.
+
 ## 데이터 수집기 (`collector`)
 
 대전 5개 구의 빵집을 **카카오 로컬 API**로 모아 DB에 저장하는 별도 프로세스다 (API 서버와 따로 실행한다).
