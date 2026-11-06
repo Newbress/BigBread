@@ -1,0 +1,44 @@
+# 운영 프로필. 실행: SPRING_PROFILES_ACTIVE=prod (docker-compose.prod.yml 이 설정한다)
+# 값은 .env(서버에만 있는 파일)에서 환경 변수로 들어온다. 위험한 값은 시작할 때 ProductionChecks 가 막는다.
+spring:
+  flyway:
+    # 샘플 데이터(db/seed)는 넣지 않는다. 스키마 마이그레이션만 적용한다.
+    locations: classpath:db/migration
+
+server:
+  # 프록시(Caddy) 뒤에서 원래 접속자 IP 를 쓴다 (요청 횟수 제한이 사용자별로 정확해진다)
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:framework}
+  # 종료 신호를 받으면 처리 중인 요청을 끝내고 내려간다 (배포 때 요청이 끊기지 않게)
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+  servlet:
+    session:
+      cookie:
+        secure: ${SESSION_COOKIE_SECURE:true}
+
+management:
+  endpoint:
+    health:
+      show-details: never
+
+bigbread:
+  photos:
+    # local(서버 디스크) 또는 s3(S3 호환 저장소: Cloudflare R2, AWS S3 …). 운영은 s3 를 권한다.
+    storage: ${PHOTO_STORAGE:s3}
+    # 사진 변환 도구가 설치된 이미지(Dockerfile)에서 쓰는 기본 명령
+    heif-command: ${PHOTO_HEIF_COMMAND:heif-convert -q 92 {in} {out}}
+    s3:
+      endpoint: ${PHOTO_S3_ENDPOINT:}
+      region: ${PHOTO_S3_REGION:auto}
+      bucket: ${PHOTO_S3_BUCKET:}
+      access-key: ${PHOTO_S3_ACCESS_KEY:}
+      secret-key: ${PHOTO_S3_SECRET_KEY:}
+      path-style: ${PHOTO_S3_PATH_STYLE:true}
+      key-prefix: ${PHOTO_S3_KEY_PREFIX:photos/}
+
+logging:
+  level:
+    root: INFO

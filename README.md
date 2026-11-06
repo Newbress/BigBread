@@ -349,6 +349,15 @@ UPDATE app_user SET role = 'USER'  WHERE id = 1;
 - 후기·영업시간·메뉴는 수집하지 않고 원본(카카오맵, 네이버 지도) 링크로 연결한다. 따라서 네이버 검색 API 키는 필요하지 않다 (`NAVER_*`는 네이버 로그인용).
 - 앞으로 고려할 작업: 제과점 인허가 데이터로 폐업 여부 교차 확인, 주기적 재수집.
 
+## 배포
+
+서버 1대에 Docker Compose로 올린다: `Caddy`(정적 파일·자동 HTTPS) → `API` → `PostgreSQL+PostGIS`, 사진은 S3 호환 저장소(Cloudflare R2, AWS S3 등). 서버 준비부터 업데이트·백업·복구까지는 **[`deploy/README.md`](deploy/README.md)**.
+
+- `docker-compose.prod.yml` + `.env.production.example`(서버의 `.env`로 복사) + `deploy/Dockerfile`(api / collector / web) + `deploy/Caddyfile`
+- 운영 프로필(`prod`)은 샘플 데이터를 넣지 않고, **위험한 설정이면 시작하지 않는다**(http 주소, 약한 DB 비밀번호, 보안 쿠키 꺼짐, `dev` 프로필 혼용 등을 한꺼번에 알려 줌).
+- 사진 저장소는 `PHOTO_STORAGE=local`(서버 디스크, 개발) 또는 `s3`(운영 권장). `PHOTO_S3_*`로 R2/S3를 설정한다.
+- DB 백업은 `deploy/backup.sh`(cron).
+
 ## 테스트
 
 프론트엔드 단위 테스트: `cd frontend && npm test` (vitest)
