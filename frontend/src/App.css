@@ -1572,3 +1572,57 @@ a.btn.btn--block {
   padding: 5px 10px;
   font-size: 0.9rem;
 }
+
+/* 상세의 즐겨찾기·담기: 카카오맵·네이버 지도 버튼과 같은 모양(테두리 없이 연한 색 채움)과 크기 */
+.action-grid .btn,
+.action-grid .icon-btn {
+  border: 0;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: filter 0.1s;
+}
+
+.action-grid .btn:hover:not(:disabled),
+.action-grid .icon-btn:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+/* 즐겨찾기: 연한 분홍, 담으면 진하게 */
+.action-grid .icon-btn {
+  background: #ffe4ec;
+  color: #9f1239;
+}
+
+.action-grid .btn.icon-btn--on {
+  background: #e11d48;
+  color: #fff;
+}
+
+/* 담기: 서비스 색(연한 주황), 담으면 진하게 */
+.action-grid .btn--toggle {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.action-grid .btn--toggle.btn--on {
+  background: var(--accent);
+  color: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .action-grid .icon-btn {
+    background: #4a1626;
+    color: #fda4af;
+  }
+
+  .action-grid .btn.icon-btn--on {
+    background: #fb7185;
+    color: #1c1612;
+  }
+
+  .action-grid .btn--toggle.btn--on {
+    color: #1c1612;
+  }
+}
