@@ -13,6 +13,19 @@ public class SessionInvalidator {
         this.sessions = sessions;
     }
 
+    /** 지금 쓰는 세션만 남기고 나머지 기기의 로그인을 끊는다. @return 끊은 세션 수 */
+    public int invalidateOthers(long userId, String keepSessionId) {
+        var found = sessions.findByPrincipalName(String.valueOf(userId));
+        int count = 0;
+        for (String id : found.keySet()) {
+            if (!id.equals(keepSessionId)) {
+                sessions.deleteById(id);
+                count++;
+            }
+        }
+        return count;
+    }
+
     /** @return 끊은 세션 수 */
     public int invalidateAll(long userId) {
         var found = sessions.findByPrincipalName(String.valueOf(userId));

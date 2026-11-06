@@ -1,7 +1,9 @@
 package com.bigbread.api.review.photo;
 
 import com.bigbread.api.auth.local.SlidingWindowRateLimiter;
+import com.bigbread.api.auth.AccountStatus;
 import com.bigbread.api.common.ApiException;
+import com.bigbread.api.report.ContentReportService;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
@@ -39,10 +41,14 @@ public class PhotoService {
     private final PhotoProcessor processor;
     private final PhotoProperties props;
     private final TransactionTemplate tx;
+    private final ContentReportService reports;
+    private final AccountStatus accountStatus;
     private final SlidingWindowRateLimiter uploadLimiter = new SlidingWindowRateLimiter(Clock.systemUTC());
 
     public PhotoService(JdbcClient jdbc, PhotoStorage storage, PhotoProcessor processor, PhotoProperties props,
-                        TransactionTemplate tx) {
+                        TransactionTemplate tx, ContentReportService reports, AccountStatus accountStatus) {
+        this.accountStatus = accountStatus;
+        this.reports = reports;
         this.jdbc = jdbc;
         this.storage = storage;
         this.processor = processor;
@@ -51,6 +57,7 @@ public class PhotoService {
     }
 
     public Photo add(long userId, long bakeryId, MultipartFile file) {
+        accountStatus.requireActive(userId);
         if (file == null || file.isEmpty()) {
             throw ApiException.badRequest("사진 파일이 비어 있어요.");
         }
@@ -108,7 +115,10 @@ public class PhotoService {
         if (key.isEmpty()) {
             return;
         }
-        tx.executeWithoutResult(status -> jdbc.sql("DELETE FROM review_photo WHERE id = :id").param("id", photoId).update());
+        tx.executeWithoutResult(status -> {
+            jdbc.sql("DELETE FROM review_photo WHERE id = :id").param("id", photoId).update();
+            reports.closeForDeleted(ContentReportService.TargetType.PHOTO, List.of(photoId));
+        });
         deleteFiles(key.get());
     }
 
@@ -162,6 +172,14 @@ public class PhotoService {
         boolean visible = jdbc.sql("SELECT EXISTS (SELECT 1 FROM review_photo WHERE storage_key = :key AND status = 'VISIBLE')")
                 .param("key", id).query(Boolean.class).single();
         if (!visible) {
+            return Optional.empty();
+        }
+        return storage.read(thumb ? PhotoKeys.thumb(id) : PhotoKeys.main(id)).map(Image::new);
+    }
+
+    /** 운영자용: 숨겨진 사진도 파일을 읽는다. */
+    public Optional<Image> loadAny(String id, boolean thumb) {
+        if (!PhotoKeys.isValidId(id)) {
             return Optional.empty();
         }
         return storage.read(thumb ? PhotoKeys.thumb(id) : PhotoKeys.main(id)).map(Image::new);

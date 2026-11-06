@@ -26,6 +26,13 @@ public class AuthRateLimits {
         }
     }
 
+    /** 로그인한 사용자별 제한 (비밀번호 확인이 필요한 요청의 무차별 대입을 막는다). 넘으면 429. */
+    public void checkUser(String action, long userId, int limit, Duration window) {
+        if (!limiter.tryAcquire(action + ":user:" + userId, limit, window)) {
+            throw ApiException.tooManyRequests(TOO_MANY);
+        }
+    }
+
     /** 대상(아이디, 이메일)별 제한. 넘으면 false (호출한 쪽이 조용히 처리한다). */
     boolean allowTarget(String action, String target, int limit, Duration window) {
         return limiter.tryAcquire(action + ":target:" + target.toLowerCase(Locale.ROOT), limit, window);

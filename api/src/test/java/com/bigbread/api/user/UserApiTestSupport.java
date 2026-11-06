@@ -55,7 +55,12 @@ public abstract class UserApiTestSupport {
 
     /** 이 사용자로 로그인한 상태로 요청한다. */
     protected RequestPostProcessor as(long userId) {
-        AppUserPrincipal principal = new AppUserPrincipal(userId, "USER");
+        return asRole(userId, "USER");
+    }
+
+    /** 세션에 들어 있는 역할을 지정해서 로그인한 상태로 요청한다 (실제 역할은 DB가 기준이다). */
+    protected RequestPostProcessor asRole(long userId, String role) {
+        AppUserPrincipal principal = new AppUserPrincipal(userId, role);
         TestingAuthenticationToken token = new TestingAuthenticationToken(principal, "n/a", List.of());
         token.setAuthenticated(true);
         return authentication(token);
@@ -63,6 +68,13 @@ public abstract class UserApiTestSupport {
 
     protected <B extends AbstractMockHttpServletRequestBuilder<B>> B withCsrf(B builder) {
         return builder.cookie(xsrf).header("X-XSRF-TOKEN", xsrf.getValue());
+    }
+
+    /** DB에서 관리자로 지정된 사용자를 만든다. */
+    protected long newAdmin(String nickname) {
+        long id = newUser(nickname);
+        jdbc.update("UPDATE app_user SET role = 'ADMIN' WHERE id = ?", id);
+        return id;
     }
 
     /** 대전 밖 가상 기준점 주변에 빵집을 만든다. */

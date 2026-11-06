@@ -35,6 +35,12 @@ export function useAuth() {
     setError(null)
   }, [])
 
+  /** 서버에서 계정이 지워진 뒤 화면의 로그인 상태만 비운다 (이미 세션이 끊겼으므로 로그아웃 요청은 보내지 않는다). */
+  const forgetUser = useCallback(() => {
+    setState((current) => ({ ...current, user: null }))
+    setError(null)
+  }, [])
+
   const logout = useCallback(async () => {
     try {
       await requestLogout()
@@ -45,5 +51,5 @@ export function useAuth() {
     }
   }, [])
 
-  return { ...state, error, login, logout }
+  return { ...state, error, login, logout, forgetUser }
 }

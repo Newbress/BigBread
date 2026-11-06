@@ -44,7 +44,7 @@ class SecurityConfig {
                                             UserAccountService accounts) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/my/**").authenticated()
+                        .requestMatchers("/api/my/**", "/api/admin/**").authenticated()
                         .anyRequest().permitAll())
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())

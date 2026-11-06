@@ -75,3 +75,11 @@ export function formatRating(avg: number | null | undefined, count: number): str
   if (avg == null || count <= 0) return ''
   return `${avg.toFixed(1)} (${count})`
 }
+
+/** 2026-11-02T09:05:00Z → 2026. 11. 2. 오후 6:05 (사용자 시간대) */
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' })
+}
