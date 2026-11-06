@@ -11,6 +11,10 @@ import type {
   Me,
   Message,
   PageResponse,
+  BakeryReport,
+  BakeryReportRequest,
+  ReportReason,
+  ReportTarget,
   Review,
   ReviewPhoto,
   RouteRequest,
@@ -215,4 +219,18 @@ export async function uploadReviewPhoto(bakeryId: number, file: File, signal?: A
 
 export function deleteReviewPhoto(bakeryId: number, photoId: number): Promise<void> {
   return sendJson<void>('DELETE', `/api/my/reviews/${bakeryId}/photos/${photoId}`)
+}
+
+// ---- 신고 / 제보 (로그인 필요) ----
+
+export function reportContent(targetType: ReportTarget, targetId: number, reason: ReportReason, detail: string): Promise<Message> {
+  return postJson<Message>('/api/my/reports', { targetType, targetId, reason, detail })
+}
+
+export function fetchMyBakeryReports(signal?: AbortSignal): Promise<BakeryReport[]> {
+  return getJson<BakeryReport[]>('/api/my/bakery-reports', signal)
+}
+
+export function createBakeryReport(request: BakeryReportRequest): Promise<BakeryReport> {
+  return postJson<BakeryReport>('/api/my/bakery-reports', request)
 }

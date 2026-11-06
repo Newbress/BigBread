@@ -20,6 +20,8 @@ type Props = {
   onLogin: () => void
   /** 리뷰가 바뀌어 목록의 평점도 새로 불러와야 할 때 */
   onReviewsChanged: () => void
+  /** 정보 오류·폐업 제보 창을 연다 (로그인이 필요하면 로그인 창이 열린다) */
+  onReport: (bakery: { id: number; name: string }) => void
 }
 
 /** 어떤 빵집에 대한 응답인지 함께 저장해서, 현재 빵집의 응답이 왔는지(loading)를 계산한다. */
@@ -45,6 +47,7 @@ export default function BakeryDetailPanel({
   user,
   onLogin,
   onReviewsChanged,
+  onReport,
 }: Props) {
   const [result, setResult] = useState<Result | null>(null)
   const [refresh, setRefresh] = useState(0)
@@ -161,6 +164,13 @@ export default function BakeryDetailPanel({
               </dl>
             </section>
           )}
+
+          <p className="detail__report">
+            정보가 달라요?{' '}
+            <button type="button" className="btn btn--link" onClick={() => onReport({ id: detail.id, name: detail.name })}>
+              정보 오류·폐업 제보
+            </button>
+          </p>
 
           <ReviewSection
             bakeryId={detail.id}

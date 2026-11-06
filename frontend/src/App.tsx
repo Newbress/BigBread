@@ -8,6 +8,7 @@ import CoursesPanel from './components/CoursesPanel.tsx'
 import FavoritesPanel from './components/FavoritesPanel.tsx'
 import FilterBar from './components/FilterBar.tsx'
 import KakaoMap from './components/KakaoMap.tsx'
+import ReportBakeryDialog, { type ReportBakeryTarget } from './components/ReportBakeryDialog.tsx'
 import RoutePanel from './components/RoutePanel.tsx'
 import { KAKAO_JS_KEY } from './config.ts'
 import { useBakeries } from './hooks/useBakeries.ts'
@@ -46,6 +47,8 @@ export default function App() {
     [district, geo.location, radius, sort],
   )
   const [listVersion, setListVersion] = useState(0)
+  /** 제보 창: undefined면 닫힘, null이면 새 빵집 제보, 값이 있으면 그 빵집에 대한 제보 */
+  const [reportTarget, setReportTarget] = useState<ReportBakeryTarget | undefined>(undefined)
   const { data, loading, error } = useBakeries(params, listVersion)
   const items = useMemo(() => data?.items ?? [], [data])
   const route = useRoute(geo.location)
@@ -75,6 +78,9 @@ export default function App() {
     if (auth.user) return true
     setLoginOpen(true)
     return false
+  }
+  const openReport = (target: ReportBakeryTarget) => {
+    if (requireLogin()) setReportTarget(target)
   }
   const toggleFavorite = (bakery: BakerySummary) => {
     if (requireLogin()) void favorites.toggle(bakery)
@@ -219,6 +225,7 @@ export default function App() {
               user={auth.user}
               onLogin={() => setLoginOpen(true)}
               onReviewsChanged={() => setListVersion((n) => n + 1)}
+              onReport={openReport}
             />
           ) : view === 'favorites' ? (
             <FavoritesPanel
@@ -277,6 +284,7 @@ export default function App() {
               onToggleBasket={route.toggle}
               favoriteIds={favorites.ids}
               onToggleFavorite={toggleFavorite}
+              onReportNew={() => openReport(null)}
             />
           )}
         </aside>
@@ -303,6 +311,8 @@ export default function App() {
           )}
         </div>
       </main>
+
+      {reportTarget !== undefined && <ReportBakeryDialog bakery={reportTarget} onClose={() => setReportTarget(undefined)} />}
     </div>
   )
 }

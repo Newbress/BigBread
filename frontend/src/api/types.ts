@@ -173,6 +173,8 @@ export type Review = {
   /** 내가 쓴 리뷰인지 (비로그인이면 항상 false) */
   mine: boolean
   photos: ReviewPhoto[]
+  /** 신고·운영자 처리로 숨겨졌는지 (내 리뷰를 내가 볼 때만 true) */
+  hidden: boolean
   createdAt: string
   updatedAt: string
 }
@@ -185,4 +187,35 @@ export type ReviewPhoto = {
   thumbUrl: string
   width: number
   height: number
+}
+
+export type ReportTarget = 'REVIEW' | 'PHOTO'
+export type ReportReason = 'SPAM' | 'ABUSE' | 'PRIVACY' | 'INAPPROPRIATE' | 'OTHER'
+
+export type BakeryReportKind = 'NEW' | 'CLOSED' | 'WRONG_INFO'
+
+export type BakeryReportRequest = {
+  kind: BakeryReportKind
+  /** CLOSED / WRONG_INFO일 때 대상 빵집 */
+  bakeryId?: number
+  name?: string
+  address?: string
+  instagram?: string
+  note?: string
+}
+
+export type BakeryReport = {
+  id: number
+  kind: BakeryReportKind
+  name: string | null
+  address: string | null
+  instagramUsername: string | null
+  note: string | null
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  /** 운영자가 남긴 안내 (반려 사유 등) */
+  adminNote: string | null
+  bakeryId: number | null
+  bakeryName: string | null
+  createdAt: string
+  reviewedAt: string | null
 }

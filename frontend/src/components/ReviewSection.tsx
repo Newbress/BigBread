@@ -9,6 +9,7 @@ import {
 } from '../api/client.ts'
 import type { PageResponse, Review, ReviewPhoto, User } from '../api/types.ts'
 import { MAX_PHOTOS, preparePhoto } from '../lib/photo.ts'
+import ContentReportForm from './ContentReportForm.tsx'
 import PhotoLightbox from './PhotoLightbox.tsx'
 
 const MAX_LENGTH = 1000
@@ -72,7 +73,8 @@ export default function ReviewSection({ bakeryId, user, onLogin, onChanged }: Pr
   const [removedIds, setRemovedIds] = useState<number[]>([])
   const [pending, setPending] = useState<PendingPhoto[]>([])
   const [preparing, setPreparing] = useState(false)
-  const [lightbox, setLightbox] = useState<{ photo: ReviewPhoto; alt: string } | null>(null)
+  const [lightbox, setLightbox] = useState<{ photo: ReviewPhoto; alt: string; mine: boolean } | null>(null)
+  const [reportingId, setReportingId] = useState<number | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const nextKey = useRef(0)
 
@@ -330,6 +332,25 @@ export default function ReviewSection({ bakeryId, user, onLogin, onChanged }: Pr
         </p>
       ) : null}
 
+      {mine?.hidden && !editing && (
+        <div className="notice" role="status">
+          <p>내 리뷰가 신고가 쌓여 잠시 숨겨졌어요. 운영자가 확인하고 있어요.</p>
+          <div className="detail__links">
+            <button type="button" className="btn btn--small" onClick={startEdit}>
+              수정
+            </button>
+            <button type="button" className="btn btn--small" onClick={() => setConfirmingDelete(true)}>
+              삭제
+            </button>
+            {confirmingDelete && (
+              <button type="button" className="btn btn--small btn--danger" disabled={saving} onClick={remove}>
+                정말 삭제
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {loadError && (
         <p className="notice notice--error" role="alert">
           {loadError}
@@ -357,13 +378,33 @@ export default function ReviewSection({ bakeryId, user, onLogin, onChanged }: Pr
                       type="button"
                       className="review__photo"
                       aria-label={`${review.nickname}님의 사진 ${index + 1} 크게 보기`}
-                      onClick={() => setLightbox({ photo, alt: `${review.nickname}님의 리뷰 사진 ${index + 1}` })}
+                      onClick={() => setLightbox({ photo, alt: `${review.nickname}님의 리뷰 사진 ${index + 1}`, mine: review.mine })}
                     >
                       <img src={photo.thumbUrl} alt="" loading="lazy" />
                     </button>
                   </li>
                 ))}
               </ul>
+            )}
+            {!review.mine && (
+              <div className="review__report">
+                {reportingId === review.id ? (
+                  <ContentReportForm
+                    targetType="REVIEW"
+                    targetId={review.id}
+                    onDone={() => setReportingId(null)}
+                    onCancel={() => setReportingId(null)}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn--link"
+                    onClick={() => (user === null ? onLogin() : setReportingId(review.id))}
+                  >
+                    신고
+                  </button>
+                )}
+              </div>
             )}
             {review.mine && !editing && (
               <div className="detail__links">
@@ -399,7 +440,22 @@ export default function ReviewSection({ bakeryId, user, onLogin, onChanged }: Pr
           {loadingMore ? '불러오는 중…' : '리뷰 더 보기'}
         </button>
       )}
-      {lightbox && <PhotoLightbox photo={lightbox.photo} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
+      {lightbox && (
+        <PhotoLightbox
+          photo={lightbox.photo}
+          alt={lightbox.alt}
+          onClose={() => setLightbox(null)}
+          reportable={!lightbox.mine}
+          onLogin={
+            user === null
+              ? () => {
+                  setLightbox(null)
+                  onLogin()
+                }
+              : undefined
+          }
+        />
+      )}
     </section>
   )
 }

@@ -1266,3 +1266,90 @@ a.btn.btn--block {
   font-size: 22px;
   cursor: pointer;
 }
+
+/* ---- 신고 · 제보 ---- */
+.btn--link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-strong);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.list__footer,
+.detail__report {
+  margin: 12px 0;
+  font-size: 0.9rem;
+  color: var(--muted, #6b7280);
+}
+
+.review__report {
+  margin-top: 4px;
+  font-size: 0.85rem;
+}
+
+.report-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.report-form label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.report-form input,
+.report-form select,
+.report-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  font: inherit;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+}
+
+.report-dialog {
+  width: min(94vw, 460px);
+  max-height: 90vh;
+}
+
+.report-dialog__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 28px 22px 22px;
+  overflow-y: auto;
+  max-height: 86vh;
+}
+
+.report-dialog h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.report-history h3 {
+  margin: 8px 0 4px;
+  font-size: 0.95rem;
+}
+
+.report-history li {
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.lightbox__report {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  max-width: calc(100% - 16px);
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #111;
+}

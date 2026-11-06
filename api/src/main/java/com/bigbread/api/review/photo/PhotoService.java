@@ -2,6 +2,7 @@ package com.bigbread.api.review.photo;
 
 import com.bigbread.api.auth.local.SlidingWindowRateLimiter;
 import com.bigbread.api.common.ApiException;
+import com.bigbread.api.report.ContentReportService;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
@@ -39,10 +40,12 @@ public class PhotoService {
     private final PhotoProcessor processor;
     private final PhotoProperties props;
     private final TransactionTemplate tx;
+    private final ContentReportService reports;
     private final SlidingWindowRateLimiter uploadLimiter = new SlidingWindowRateLimiter(Clock.systemUTC());
 
     public PhotoService(JdbcClient jdbc, PhotoStorage storage, PhotoProcessor processor, PhotoProperties props,
-                        TransactionTemplate tx) {
+                        TransactionTemplate tx, ContentReportService reports) {
+        this.reports = reports;
         this.jdbc = jdbc;
         this.storage = storage;
         this.processor = processor;
@@ -108,7 +111,10 @@ public class PhotoService {
         if (key.isEmpty()) {
             return;
         }
-        tx.executeWithoutResult(status -> jdbc.sql("DELETE FROM review_photo WHERE id = :id").param("id", photoId).update());
+        tx.executeWithoutResult(status -> {
+            jdbc.sql("DELETE FROM review_photo WHERE id = :id").param("id", photoId).update();
+            reports.closeForDeleted(ContentReportService.TargetType.PHOTO, List.of(photoId));
+        });
         deleteFiles(key.get());
     }
 
