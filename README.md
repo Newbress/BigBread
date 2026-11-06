@@ -249,6 +249,20 @@ curl -c jar -b jar -H "X-XSRF-TOKEN: <jar의 XSRF-TOKEN 값>" -H 'Content-Type: 
 - 목록·상세에 평균 평점과 리뷰 수(`★ 4.5 (12)`)가 나온다.
 - **인기 점수**(기본 정렬)는 외부 수집이 아니라 우리 서비스 안의 활동으로 계산한다: `즐겨찾기 x 2 + 코스에 담긴 수 x 1 + 리뷰 수 x 보정 평균 평점`. 보정 평균은 `(3 x 3.5 + 평점 합) / (3 + 리뷰 수)`라서 리뷰가 한두 개일 때 쏠리지 않는다. 즐겨찾기·코스·리뷰가 바뀌면 같은 요청 안에서 DB 함수 `recalc_bakery_stats()`가 다시 계산한다(`V4`).
 
+## 리뷰 사진
+
+리뷰 하나에 **최대 3장**, **장당 최대 10MB**(서버 설정 `bigbread.photos.*`)까지 붙일 수 있다. 리뷰를 먼저 저장한 뒤 사진을 한 장씩 올린다.
+
+- `POST /api/my/reviews/{bakeryId}/photos` (multipart `file`) · `DELETE /api/my/reviews/{bakeryId}/photos/{photoId}` (로그인 필요, 한 시간에 30장까지) · `GET /api/photos/{id}` 원본, `GET /api/photos/{id}/thumb` 썸네일 (공개)
+- **화질**: 긴 변이 2560px보다 크면 비율을 유지해 줄이고(폰 원본 4000px대 → 2560px), 작은 사진은 그대로 둔다. JPEG 품질 90. 목록에는 480px 썸네일을 쓴다. 폰에서는 업로드 전에 브라우저가 같은 크기로 줄여서 보내 데이터가 덜 든다.
+- **개인정보**: 서버가 사진을 다시 인코딩해서 저장하므로 EXIF(촬영 위치 GPS 등)가 모두 지워진다. EXIF 방향은 반영해서 똑바로 저장한다.
+- **형식**: 확장자나 Content-Type이 아니라 파일 내용으로 판별한다. JPEG·PNG·WebP·HEIC만 받고, 그 외(GIF, 위장된 파일 등)는 이유와 함께 거부한다. 해상도가 8천만 화소를 넘으면 거부한다.
+- **아이폰(HEIC)**: iOS의 Safari/Chrome은 브라우저가 읽어서 JPEG로 줄여 올린다. 데스크톱 등에서 HEIC 파일을 직접 고르면 서버가 외부 명령으로 JPEG로 바꾼다. 서버에 변환 도구가 있어야 한다.
+  - 리눅스: `sudo apt install libheif-examples libheif-plugin-libde265` (기본 명령 `heif-convert -q 92 {in} {out}`), 맥: `brew install libheif`
+  - 윈도(개발): ImageMagick을 설치하고 `.env`에 `PHOTO_HEIF_COMMAND=magick {in} -quality 92 {out}`. 도구가 없으면 "JPEG로 저장해서 다시 올려 주세요" 안내가 나간다.
+- **저장 위치**: 개발에서는 `api/data/uploads`(`PHOTO_DIR`로 변경, git 제외). 코드는 `PhotoStorage` 인터페이스 뒤에 있어서 운영에서는 S3 호환 저장소 구현으로 바꾼다. 파일 이름은 추측할 수 없는 UUID이고 원본 파일명은 저장하지 않는다.
+- 리뷰나 사진을 지우면 파일도 함께 지워진다. `review_photo.status = HIDDEN`인 사진은 보이지 않는다(신고·관리자 기능에서 사용 예정).
+
 ## 데이터 수집기 (`collector`)
 
 대전 5개 구의 빵집을 **카카오 로컬 API**로 모아 DB에 저장하는 별도 프로세스다 (API 서버와 따로 실행한다).

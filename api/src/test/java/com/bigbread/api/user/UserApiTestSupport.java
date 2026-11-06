@@ -17,7 +17,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,7 +61,7 @@ public abstract class UserApiTestSupport {
         return authentication(token);
     }
 
-    protected MockHttpServletRequestBuilder withCsrf(MockHttpServletRequestBuilder builder) {
+    protected <B extends AbstractMockHttpServletRequestBuilder<B>> B withCsrf(B builder) {
         return builder.cookie(xsrf).header("X-XSRF-TOKEN", xsrf.getValue());
     }
 

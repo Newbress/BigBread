@@ -172,6 +172,17 @@ export type Review = {
   nickname: string
   /** 내가 쓴 리뷰인지 (비로그인이면 항상 false) */
   mine: boolean
+  photos: ReviewPhoto[]
   createdAt: string
   updatedAt: string
+}
+
+export type ReviewPhoto = {
+  id: number
+  /** 원본(긴 변 2560px 이하) 주소 */
+  url: string
+  /** 목록용 작은 사진 주소 */
+  thumbUrl: string
+  width: number
+  height: number
 }

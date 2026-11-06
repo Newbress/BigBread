@@ -32,6 +32,10 @@ public class ApiException extends RuntimeException {
         return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, message);
     }
 
+    public static ApiException payloadTooLarge(String message) {
+        return new ApiException(HttpStatus.CONTENT_TOO_LARGE, message);
+    }
+
     public static ApiException notFound(String message) {
         return new ApiException(HttpStatus.NOT_FOUND, message);
     }
