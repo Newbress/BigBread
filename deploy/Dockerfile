@@ -13,7 +13,8 @@ COPY gradle gradle
 COPY core/build.gradle.kts core/
 COPY api/build.gradle.kts api/
 COPY collector/build.gradle.kts collector/
-RUN chmod +x gradlew && (./gradlew --no-daemon -q :api:dependencies :collector:dependencies > /dev/null 2>&1 || true)
+# 윈도에서 받은 gradlew 는 줄 끝이 CRLF 라 리눅스에서 "not found" 가 난다 → 줄 끝을 고치고 실행 권한을 준다.
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew && (./gradlew --no-daemon -q :api:dependencies :collector:dependencies > /dev/null 2>&1 || true)
 COPY core core
 COPY api api
 COPY collector collector
