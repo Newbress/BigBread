@@ -59,6 +59,30 @@ class ProductionChecks {
         if (dbUrl == null || dbUrl.contains("localhost")) {
             problems.add("DB_URL 이 localhost 를 가리켜요. (Compose 에서는 jdbc:postgresql://db:5432/… 여야 해요)");
         }
+        // 사진 저장소: s3(기본)이면 접속 정보가 있어야 한다. 없으면 긴 오류 대신 여기서 바로 알려 준다.
+        String storage = property.apply("bigbread.photos.storage");
+        if (storage == null || storage.isBlank() || "s3".equalsIgnoreCase(storage)) {
+            List<String> missing = new ArrayList<>();
+            if (isBlank(property.apply("bigbread.photos.s3.bucket"))) {
+                missing.add("PHOTO_S3_BUCKET");
+            }
+            if (isBlank(property.apply("bigbread.photos.s3.access-key"))) {
+                missing.add("PHOTO_S3_ACCESS_KEY");
+            }
+            if (isBlank(property.apply("bigbread.photos.s3.secret-key"))) {
+                missing.add("PHOTO_S3_SECRET_KEY");
+            }
+            if (!missing.isEmpty()) {
+                problems.add("사진 저장소가 s3 인데 " + String.join(", ", missing)
+                        + " 가 비어 있어요. 값을 채우거나, 서버 디스크에 저장하려면 PHOTO_STORAGE=local 로 바꿔 주세요.");
+            }
+        } else if (!"local".equalsIgnoreCase(storage)) {
+            problems.add("PHOTO_STORAGE 는 s3 또는 local 이어야 해요. (현재: " + storage + ")");
+        }
         return problems;
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

@@ -28,7 +28,8 @@ FROM eclipse-temurin:21-jre AS api
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libheif-examples libheif-plugin-libde265 curl \
  && rm -rf /var/lib/apt/lists/* \
- && useradd --system --uid 10001 --create-home app
+ && useradd --system --uid 10001 --create-home app \
+ && mkdir -p /data/uploads && chown app:app /data/uploads
 COPY --from=jvm-build /api.jar /app/app.jar
 USER app
 WORKDIR /app

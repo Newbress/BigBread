@@ -17,6 +17,7 @@ class ProductionChecksTest {
         p.put("server.forward-headers-strategy", "framework");
         p.put("spring.datasource.password", "a-long-random-secret-9f3k2");
         p.put("spring.datasource.url", "jdbc:postgresql://db:5432/bigbread");
+        p.put("bigbread.photos.storage", "local");
         return p;
     }
 
@@ -45,6 +46,29 @@ class ProductionChecksTest {
 
     @Test
     void 값이_아예_없어도_문제로_본다() {
-        assertThat(check(new HashMap<>(), "prod")).hasSize(5);
+        // 값이 없으면 사진 저장소는 기본값(s3)으로 보고 함께 걸린다.
+        assertThat(check(new HashMap<>(), "prod")).hasSize(6);
+    }
+
+    @Test
+    void 사진_저장소가_s3인데_접속_정보가_없으면_이유와_해결책을_알려준다() {
+        Map<String, String> p = good();
+        p.put("bigbread.photos.storage", "s3");
+        List<String> problems = check(p, "prod");
+        assertThat(problems).hasSize(1);
+        assertThat(problems.get(0)).contains("PHOTO_S3_BUCKET").contains("PHOTO_S3_ACCESS_KEY").contains("PHOTO_S3_SECRET_KEY")
+                .contains("PHOTO_STORAGE=local");
+
+        p.put("bigbread.photos.s3.bucket", "photos");
+        p.put("bigbread.photos.s3.access-key", "ak");
+        p.put("bigbread.photos.s3.secret-key", "sk");
+        assertThat(check(p, "prod")).isEmpty();
+    }
+
+    @Test
+    void 사진_저장소_종류가_이상하면_거부한다() {
+        Map<String, String> p = good();
+        p.put("bigbread.photos.storage", "ftp");
+        assertThat(check(p, "prod")).hasSize(1).first().asString().contains("s3 또는 local");
     }
 }
