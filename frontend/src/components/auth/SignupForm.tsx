@@ -161,7 +161,10 @@ export default function SignupForm({ onBack, onDone }: Props) {
       <div className="consent">
         <label className="check">
           <input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} />
-          개인정보 수집·이용에 동의해요 (필수)
+          <span>
+            <a href="/terms" target="_blank" rel="noreferrer">이용약관</a>과{' '}
+            <a href="/privacy" target="_blank" rel="noreferrer">개인정보 처리방침</a>에 동의해요 (필수)
+          </span>
         </label>
         <details>
           <summary>내용 보기</summary>
