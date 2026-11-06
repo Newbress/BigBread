@@ -13,6 +13,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-session-jdbc")
     // Argon2 비밀번호 해시(Spring Security의 Argon2PasswordEncoder가 사용)
     implementation("org.bouncycastle:bcprov-jdk18on:1.80")
+    // 리뷰 사진을 S3 호환 저장소(AWS S3, Cloudflare R2 등)에 저장
+    implementation(platform("software.amazon.awssdk:bom:2.31.50"))
+    implementation("software.amazon.awssdk:s3")
+    implementation("software.amazon.awssdk:url-connection-client")
     // 리뷰 사진: JPEG(CMYK 등 특수 형식, EXIF 방향)·WebP 읽기
     implementation("com.twelvemonkeys.imageio:imageio-jpeg:3.15.3")
     implementation("com.twelvemonkeys.imageio:imageio-webp:3.15.3")

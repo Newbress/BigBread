@@ -5,14 +5,13 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.regex.Pattern;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /** 로컬 폴더에 저장한다 (개발용). 폴더 밖으로 나가는 키는 거부한다. */
 @Component
+@ConditionalOnProperty(name = "bigbread.photos.storage", havingValue = "local", matchIfMissing = true)
 public class LocalPhotoStorage implements PhotoStorage {
-
-    private static final Pattern KEY = Pattern.compile("[0-9a-f]{2}/[0-9a-f]{32}(_t)?\\.jpg");
 
     private final Path root;
 
@@ -51,7 +50,7 @@ public class LocalPhotoStorage implements PhotoStorage {
     }
 
     private Path resolve(String key) {
-        if (key == null || !KEY.matcher(key).matches()) {
+        if (!PhotoKeys.isValidKey(key)) {
             throw new IllegalArgumentException("잘못된 사진 키입니다.");
         }
         Path path = root.resolve(key).normalize();

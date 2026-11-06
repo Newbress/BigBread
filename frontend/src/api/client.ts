@@ -1,5 +1,6 @@
 import { readCookie } from '../lib/cookie.ts'
 import type {
+  AccountInfo,
   AuthOptions,
   AuthProvider,
   BakeryDetail,
@@ -10,7 +11,13 @@ import type {
   FavoriteItem,
   Me,
   Message,
+  MyContentReport,
+  MyReview,
   PageResponse,
+  BakeryReport,
+  BakeryReportRequest,
+  ReportReason,
+  ReportTarget,
   Review,
   ReviewPhoto,
   RouteRequest,
@@ -47,7 +54,7 @@ async function requestJson<T>(url: string, init: RequestInit): Promise<T> {
   return (await res.json()) as T
 }
 
-function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+export function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   return requestJson<T>(url, { signal, headers: { Accept: 'application/json' } })
 }
 
@@ -87,7 +94,7 @@ async function csrfHeaders(signal?: AbortSignal): Promise<Record<string, string>
   return headers
 }
 
-async function sendJson<T>(method: 'POST' | 'PUT' | 'DELETE', url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+export async function sendJson<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const headers = await csrfHeaders(signal)
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   return requestJson<T>(url, { method, signal, headers, body: body === undefined ? undefined : JSON.stringify(body) })
@@ -215,4 +222,43 @@ export async function uploadReviewPhoto(bakeryId: number, file: File, signal?: A
 
 export function deleteReviewPhoto(bakeryId: number, photoId: number): Promise<void> {
   return sendJson<void>('DELETE', `/api/my/reviews/${bakeryId}/photos/${photoId}`)
+}
+
+// ---- 신고 / 제보 (로그인 필요) ----
+
+export function reportContent(targetType: ReportTarget, targetId: number, reason: ReportReason, detail: string): Promise<Message> {
+  return postJson<Message>('/api/my/reports', { targetType, targetId, reason, detail })
+}
+
+export function fetchMyBakeryReports(signal?: AbortSignal): Promise<BakeryReport[]> {
+  return getJson<BakeryReport[]>('/api/my/bakery-reports', signal)
+}
+
+export function createBakeryReport(request: BakeryReportRequest): Promise<BakeryReport> {
+  return postJson<BakeryReport>('/api/my/bakery-reports', request)
+}
+
+// ---- 내 계정 ----
+
+export function fetchAccountInfo(signal?: AbortSignal): Promise<AccountInfo> {
+  return getJson<AccountInfo>('/api/my/account', signal)
+}
+
+export function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  return sendJson<void>('PUT', '/api/my/account/password', { currentPassword, newPassword })
+}
+
+/** 자체 가입 계정은 password, 소셜 계정은 confirm("탈퇴")으로 본인을 다시 확인한다. */
+export function withdrawAccount(body: { password?: string; confirm?: string }): Promise<void> {
+  return sendJson<void>('DELETE', '/api/my/account', body)
+}
+
+// ---- 내 활동 ----
+
+export function fetchMyReviews(signal?: AbortSignal): Promise<MyReview[]> {
+  return getJson<MyReview[]>('/api/my/reviews', signal)
+}
+
+export function fetchMyContentReports(signal?: AbortSignal): Promise<MyContentReport[]> {
+  return getJson<MyContentReport[]>('/api/my/reports', signal)
 }

@@ -20,16 +20,22 @@ type Props = {
   onLogin: () => void
   /** 리뷰가 바뀌어 목록의 평점도 새로 불러와야 할 때 */
   onReviewsChanged: () => void
+  /** 정보 오류·폐업 제보 창을 연다 (로그인이 필요하면 로그인 창이 열린다) */
+  onReport: (bakery: { id: number; name: string }) => void
 }
 
 /** 어떤 빵집에 대한 응답인지 함께 저장해서, 현재 빵집의 응답이 왔는지(loading)를 계산한다. */
 type Result = { id: number; detail: BakeryDetail | null; error: string | null }
 
-function ExternalLink({ href, children }: { href: string | null; children: string }) {
+type LinkTone = 'kakao' | 'naver' | 'instagram'
+
+/** 카카오맵·네이버 지도·인스타그램 이동 버튼. 색은 서비스마다 달라도 크기와 모양은 같다. */
+function ExternalLink({ href, tone, children }: { href: string | null; tone: LinkTone; children: string }) {
   if (!isHttpUrl(href)) return null
   return (
-    <a className="btn" href={href} target="_blank" rel="noopener noreferrer">
+    <a className={`ext-btn ext-btn--${tone}`} href={href} target="_blank" rel="noopener noreferrer">
       {children}
+      <span aria-hidden="true"> →</span>
     </a>
   )
 }
@@ -45,6 +51,7 @@ export default function BakeryDetailPanel({
   user,
   onLogin,
   onReviewsChanged,
+  onReport,
 }: Props) {
   const [result, setResult] = useState<Result | null>(null)
   const [refresh, setRefresh] = useState(0)
@@ -111,23 +118,35 @@ export default function BakeryDetailPanel({
             )}
           </header>
 
-          <div className="detail__links">
-            {onToggleFavorite && <FavoriteButton active={isFavorite} name={detail.name} onToggle={onToggleFavorite} withLabel />}
-            {onToggleBasket && (
-              <button
-                type="button"
-                className={inBasket ? 'btn btn--toggle btn--on' : 'btn btn--toggle'}
-                aria-pressed={inBasket}
-                disabled={!inBasket && basketFull}
-                onClick={onToggleBasket}
-              >
-                {inBasket ? '담음' : '담기'}
-              </button>
-            )}
-            <ExternalLink href={detail.links.kakaoMap}>카카오맵에서 보기</ExternalLink>
-            <ExternalLink href={detail.links.naverMap}>네이버 지도에서 보기</ExternalLink>
-            <ExternalLink href={detail.links.instagram}>인스타그램</ExternalLink>
-          </div>
+          {(onToggleFavorite || onToggleBasket) && (
+            <div className="action-grid">
+              {onToggleFavorite && <FavoriteButton active={isFavorite} name={detail.name} onToggle={onToggleFavorite} withLabel />}
+              {onToggleBasket && (
+                <button
+                  type="button"
+                  className={inBasket ? 'btn btn--toggle btn--on' : 'btn btn--toggle'}
+                  aria-pressed={inBasket}
+                  disabled={!inBasket && basketFull}
+                  onClick={onToggleBasket}
+                >
+                  {inBasket ? '담음' : '담기'}
+                </button>
+              )}
+            </div>
+          )}
+          {[detail.links.kakaoMap, detail.links.naverMap, detail.links.instagram].some(isHttpUrl) && (
+            <div className="ext-links">
+              <ExternalLink href={detail.links.kakaoMap} tone="kakao">
+                카카오맵
+              </ExternalLink>
+              <ExternalLink href={detail.links.naverMap} tone="naver">
+                네이버 지도
+              </ExternalLink>
+              <ExternalLink href={detail.links.instagram} tone="instagram">
+                인스타그램
+              </ExternalLink>
+            </div>
+          )}
 
           <section aria-labelledby="breads-title">
             <h3 id="breads-title">빵</h3>
@@ -161,6 +180,13 @@ export default function BakeryDetailPanel({
               </dl>
             </section>
           )}
+
+          <p className="detail__report">
+            정보가 달라요?{' '}
+            <button type="button" className="btn btn--link" onClick={() => onReport({ id: detail.id, name: detail.name })}>
+              정보 오류·폐업 제보
+            </button>
+          </p>
 
           <ReviewSection
             bakeryId={detail.id}
