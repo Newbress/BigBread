@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { Link } from 'react-router'
 import type { AuthOptions, AuthProvider, User } from '../api/types.ts'
 import { isHttpUrl } from '../lib/format.ts'
 import { wantsLoginOnLoad } from '../lib/loginParam.ts'
@@ -46,6 +47,11 @@ export default function AuthMenu({
           <img className="auth__avatar" src={user.profileImageUrl} alt="" referrerPolicy="no-referrer" />
         )}
         <span className="auth__name">{user.nickname}</span>
+        {user.role === 'ADMIN' && (
+          <Link className="btn btn--small" to="/admin">
+            관리자
+          </Link>
+        )}
         <button type="button" className="btn btn--small" onClick={onLogout}>
           로그아웃
         </button>
