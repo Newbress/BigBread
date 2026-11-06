@@ -71,4 +71,16 @@ class ProductionChecksTest {
         p.put("bigbread.photos.storage", "ftp");
         assertThat(check(p, "prod")).hasSize(1).first().asString().contains("s3 또는 local");
     }
+
+    @Test
+    void 메일을_켰다면_보내는_주소가_있어야_하고_암호화되어야_한다() {
+        Map<String, String> p = good();
+        p.put("bigbread.mail.host", "smtp.example.com");
+        p.put("bigbread.mail.security", "NONE");
+        assertThat(String.join("\n", check(p, "prod"))).contains("MAIL_FROM").contains("MAIL_SECURITY");
+
+        p.put("bigbread.mail.from", "no-reply@bread.example.com");
+        p.put("bigbread.mail.security", "STARTTLS");
+        assertThat(check(p, "prod")).isEmpty();
+    }
 }

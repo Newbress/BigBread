@@ -79,6 +79,15 @@ class ProductionChecks {
         } else if (!"local".equalsIgnoreCase(storage)) {
             problems.add("PHOTO_STORAGE 는 s3 또는 local 이어야 해요. (현재: " + storage + ")");
         }
+        // 메일: host 를 비워 두는 건 허용(자체 회원가입만 꺼짐). 켰다면 보내는 주소가 있어야 하고 암호화되어야 한다.
+        if (!isBlank(property.apply("bigbread.mail.host"))) {
+            if (isBlank(property.apply("bigbread.mail.from"))) {
+                problems.add("MAIL_HOST 가 있는데 MAIL_FROM(보내는 주소)이 비어 있어요.");
+            }
+            if ("none".equalsIgnoreCase(property.apply("bigbread.mail.security"))) {
+                problems.add("MAIL_SECURITY=NONE 은 운영에서 쓸 수 없어요. (STARTTLS 또는 SSL)");
+            }
+        }
         return problems;
     }
 

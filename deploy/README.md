@@ -16,6 +16,7 @@
 | 도메인 | DNS A 레코드를 서버 IP로 (HTTPS 인증서 자동 발급에 필요) |
 | 사진 저장소 | R2 또는 S3 버킷 1개 + 접근 키 (버킷을 공개로 열 필요 없음 — 사진은 API가 대신 내려준다) |
 | 카카오 | JS 키(공개용)에 **이 도메인을 웹 플랫폼으로 등록**, REST 키(서버 전용), 로그인 리다이렉트 URI `https://도메인/login/oauth2/code/kakao` |
+| 메일 서비스 | (이메일 가입·비밀번호 재설정을 쓸 때) SMTP 서비스 1개 — 아래 "메일 설정" 참고. 없으면 소셜 로그인만 된다 |
 | 네이버·구글 | 콜백 주소 `https://도메인/login/oauth2/code/naver`, `…/google` 등록 (쓸 때만) |
 
 ## 1. 서버 기본 보안 (처음 한 번)
@@ -98,9 +99,24 @@ docker compose -f docker-compose.prod.yml start api web
 | 디스크·메모리 | `df -h`, `free -m` (디스크가 차면 DB가 멈춘다) |
 | 사진 변환 | 데스크톱에서 `.heic` 업로드 시험 (아이폰 사진은 브라우저가 변환한다) |
 
+## 메일 설정 (이메일 가입·비밀번호 재설정)
+
+SMTP 를 쓰는 서비스면 어디든 된다. 무료 한도로 시작하기 쉬운 순서:
+
+1. **Brevo** (하루 300통 무료): 가입 → SMTP & API → SMTP 키 생성. `MAIL_HOST=smtp-relay.brevo.com`, `MAIL_PORT=587`, `MAIL_USERNAME`=로그인 이메일(표시된 SMTP 로그인), `MAIL_PASSWORD`=SMTP 키.
+2. **AWS SES**: 서울 리전, 도메인 인증 후 SMTP 자격 증명 생성. `MAIL_HOST=email-smtp.ap-northeast-2.amazonaws.com`.
+
+공통 순서:
+
+1. 메일 서비스에서 **내 도메인을 인증**한다 (서비스가 알려 주는 SPF·DKIM DNS 레코드를 도메인 DNS에 추가). 인증 안 한 주소로 보내면 스팸함에 가거나 거절된다.
+2. `MAIL_FROM` 을 그 도메인의 주소(예: `no-reply@도메인`)로 정한다.
+3. `.env` 에 `MAIL_*` 값을 채우고 `docker compose -f docker-compose.prod.yml up -d` 로 api 를 다시 띄운다. 키는 `.env` 에만 둔다 (커밋·채팅 금지).
+4. 확인: 이메일로 가입해 인증 메일이 오는지 본다. 로그에는 받는 사람 일부(`a**@…`)와 실패 이유만 남고 링크는 남지 않는다.
+
+`MAIL_HOST` 가 있는데 `MAIL_FROM` 이 비었거나 `MAIL_SECURITY=NONE` 이면 서버가 시작하지 않는다. 메일 서버가 느리거나 죽으면 가입은 "잠시 후 다시 시도" 안내와 함께 취소되고 다시 시도할 수 있다.
+
 ## 7. 아직 안 된 것 (다음 작업)
 
-- 메일 발송(SMTP): 지금은 운영에서 자체 회원가입·비밀번호 재설정이 꺼져 있다. **소셜 로그인만 동작**한다.
 - GitHub Actions 자동 배포: 지금은 서버에서 `git pull` 후 위 명령으로 올린다.
 - 이용약관·개인정보 처리방침 페이지.
 - Content-Security-Policy 같은 추가 보안 헤더 (카카오 지도 SDK 도메인을 확인한 뒤 적용).
