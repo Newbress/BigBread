@@ -28,5 +28,7 @@ subprojects {
 
     tasks.withType<Test> {
         useJUnitPlatform()
+        // 통합 테스트는 Spring 컨텍스트를 여러 개 캐시한다. 풀을 작게 해 DB 접속 수(기본 100) 한도를 넘기지 않게 한다.
+        environment("SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE", "3")
     }
 }

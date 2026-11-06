@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import './index.css'
 import App from './App.tsx'
+import AdminPage from './pages/AdminPage.tsx'
+import MyPage from './pages/MyPage.tsx'
 import ResetPasswordPage from './pages/ResetPasswordPage.tsx'
 import VerifyEmailPage from './pages/VerifyEmailPage.tsx'
 
@@ -13,6 +15,8 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/admin/*" element={<AdminPage />} />
+        <Route path="/my/*" element={<MyPage />} />
         <Route path="*" element={<App />} />
       </Routes>
     </BrowserRouter>
