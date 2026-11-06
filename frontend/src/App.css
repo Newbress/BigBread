@@ -1353,3 +1353,28 @@ a.btn.btn--block {
   background: rgba(255, 255, 255, 0.95);
   color: #111;
 }
+
+/* ---- 내 계정 ---- */
+.account-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  text-align: left;
+}
+
+.account-section h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.account-section ul {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 0.9rem;
+}
+
+.account-section--danger h3 {
+  color: var(--danger);
+}

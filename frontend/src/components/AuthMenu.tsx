@@ -1,8 +1,9 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import type { AuthOptions, AuthProvider, User } from '../api/types.ts'
 import { isHttpUrl } from '../lib/format.ts'
 import { wantsLoginOnLoad } from '../lib/loginParam.ts'
+import AccountDialog from './auth/AccountDialog.tsx'
 import LoginDialog from './auth/LoginDialog.tsx'
 
 type Props = {
@@ -13,6 +14,8 @@ type Props = {
   error: string | null
   onLogin: (loginId: string, password: string) => Promise<void>
   onLogout: () => void
+  /** 회원 탈퇴가 끝났을 때 (화면의 로그인 상태를 비운다) */
+  onAccountDeleted?: () => void
   /** 로그인 창이 열려 있는지 (다른 화면에서도 열 수 있도록 부모가 가진다) */
   loginOpen: boolean
   onLoginOpenChange: (open: boolean) => void
@@ -26,10 +29,12 @@ export default function AuthMenu({
   error,
   onLogin,
   onLogout,
+  onAccountDeleted,
   loginOpen: open,
   onLoginOpenChange,
 }: Props) {
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const [accountOpen, setAccountOpen] = useState(false)
 
   const close = () => {
     onLoginOpenChange(false)
@@ -52,9 +57,22 @@ export default function AuthMenu({
             관리자
           </Link>
         )}
+        <button type="button" className="btn btn--small" onClick={() => setAccountOpen(true)}>
+          내 계정
+        </button>
         <button type="button" className="btn btn--small" onClick={onLogout}>
           로그아웃
         </button>
+        {accountOpen && (
+          <AccountDialog
+            user={user}
+            onClose={() => setAccountOpen(false)}
+            onDeleted={() => {
+              setAccountOpen(false)
+              onAccountDeleted?.()
+            }}
+          />
+        )}
         {error && (
           <p className="notice notice--error auth__error" role="alert">
             {error}

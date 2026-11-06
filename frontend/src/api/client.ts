@@ -1,5 +1,6 @@
 import { readCookie } from '../lib/cookie.ts'
 import type {
+  AccountInfo,
   AuthOptions,
   AuthProvider,
   BakeryDetail,
@@ -233,4 +234,19 @@ export function fetchMyBakeryReports(signal?: AbortSignal): Promise<BakeryReport
 
 export function createBakeryReport(request: BakeryReportRequest): Promise<BakeryReport> {
   return postJson<BakeryReport>('/api/my/bakery-reports', request)
+}
+
+// ---- 내 계정 ----
+
+export function fetchAccountInfo(signal?: AbortSignal): Promise<AccountInfo> {
+  return getJson<AccountInfo>('/api/my/account', signal)
+}
+
+export function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  return sendJson<void>('PUT', '/api/my/account/password', { currentPassword, newPassword })
+}
+
+/** 자체 가입 계정은 password, 소셜 계정은 confirm("탈퇴")으로 본인을 다시 확인한다. */
+export function withdrawAccount(body: { password?: string; confirm?: string }): Promise<void> {
+  return sendJson<void>('DELETE', '/api/my/account', body)
 }

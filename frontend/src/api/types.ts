@@ -219,3 +219,5 @@ export type BakeryReport = {
   createdAt: string
   reviewedAt: string | null
 }
+
+export type AccountInfo = { hasPassword: boolean; loginId: string | null; providers: string[] }
