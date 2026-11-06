@@ -124,6 +124,13 @@ class ReviewApiTest extends UserApiTestSupport {
         write(me, b, "{\"rating\":4}").andExpect(status().isOk());
         mvc.perform(get("/api/my/reviews").with(as(me)))
                 .andExpect(jsonPath("$[*].bakery.name", contains("리뷰B", "리뷰A")));
+        long reviewA = jdbc.queryForObject("SELECT id FROM review WHERE bakery_id = ? AND user_id = ?", Long.class, a, me);
+        jdbc.update("INSERT INTO review_photo (review_id, storage_key, width, height, byte_size, seq) VALUES (?, ?, 10, 10, 1, 1)", reviewA, "b".repeat(32));
+        mvc.perform(get("/api/my/reviews").with(as(me)))
+                .andExpect(jsonPath("$[1].photos", hasSize(1)))
+                .andExpect(jsonPath("$[1].hidden").value(false));
+        jdbc.update("UPDATE review SET status = 'HIDDEN' WHERE id = ?", reviewA);
+        mvc.perform(get("/api/my/reviews").with(as(me))).andExpect(jsonPath("$[1].hidden").value(true));
         jdbc.update("UPDATE bakery SET status = 'HIDDEN' WHERE id = ?", b);
         mvc.perform(get("/api/my/reviews").with(as(me))).andExpect(jsonPath("$[*].bakery.name", contains("리뷰A")));
     }

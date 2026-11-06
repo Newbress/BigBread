@@ -343,3 +343,30 @@
   flex-direction: row;
   align-items: center;
 }
+
+.admin-place {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-candidate {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border, #e5d5c5);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.admin-candidate--on {
+  border-color: var(--accent, #b45309);
+  background: var(--accent-soft, #fdecd8);
+}

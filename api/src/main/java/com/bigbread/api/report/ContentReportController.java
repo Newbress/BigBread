@@ -6,9 +6,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,6 +33,11 @@ public class ContentReportController {
 
     public ContentReportController(ContentReportService reports) {
         this.reports = reports;
+    }
+
+    @GetMapping
+    public List<ContentReportService.Mine> mine(@AuthenticationPrincipal AppUserPrincipal me) {
+        return reports.mine(me.userId());
     }
 
     @PostMapping

@@ -34,8 +34,9 @@ public class ReviewService {
         }
     }
 
-    public record MyReview(long id, BakerySummary bakery, int rating, String content,
-                           OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+    /** 내가 쓴 리뷰 목록의 한 줄. hidden은 신고·운영자 처리로 숨겨진 상태. */
+    public record MyReview(long id, BakerySummary bakery, int rating, String content, List<PhotoService.Photo> photos,
+                           boolean hidden, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
     }
 
     private final JdbcClient jdbc;
@@ -94,21 +95,24 @@ public class ReviewService {
 
     /** 내가 쓴 리뷰 전체, 최근에 쓴 순서. 숨김 처리된 빵집의 리뷰는 빠진다. */
     public List<MyReview> listMine(long userId) {
-        record Row(long id, long bakeryId, int rating, String content, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+        record Row(long id, long bakeryId, int rating, String content, boolean hidden, OffsetDateTime createdAt,
+                   OffsetDateTime updatedAt) {
         }
         List<Row> rows = jdbc.sql("""
-                        SELECT id, bakery_id, rating, content, created_at, updated_at FROM review
+                        SELECT id, bakery_id, rating, content, status, created_at, updated_at FROM review
                          WHERE user_id = :u ORDER BY updated_at DESC, id DESC
                         """)
                 .param("u", userId)
                 .query((rs, n) -> new Row(rs.getLong("id"), rs.getLong("bakery_id"), rs.getInt("rating"),
-                        rs.getString("content"), rs.getObject("created_at", OffsetDateTime.class),
-                        rs.getObject("updated_at", OffsetDateTime.class)))
+                        rs.getString("content"), "HIDDEN".equals(rs.getString("status")),
+                        rs.getObject("created_at", OffsetDateTime.class), rs.getObject("updated_at", OffsetDateTime.class)))
                 .list();
+        Map<Long, List<PhotoService.Photo>> photosByReview = photos.visibleByReview(rows.stream().map(Row::id).toList());
         Map<Long, BakerySummary> byId = new HashMap<>();
         bakeries.findSummariesByIds(rows.stream().map(Row::bakeryId).toList()).forEach(b -> byId.put(b.id(), b));
         return rows.stream().filter(r -> byId.containsKey(r.bakeryId()))
-                .map(r -> new MyReview(r.id(), byId.get(r.bakeryId()), r.rating(), r.content(), r.createdAt(), r.updatedAt()))
+                .map(r -> new MyReview(r.id(), byId.get(r.bakeryId()), r.rating(), r.content(),
+                        photosByReview.getOrDefault(r.id(), List.of()), r.hidden(), r.createdAt(), r.updatedAt()))
                 .toList();
     }
 

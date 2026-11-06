@@ -11,6 +11,8 @@ import type {
   FavoriteItem,
   Me,
   Message,
+  MyContentReport,
+  MyReview,
   PageResponse,
   BakeryReport,
   BakeryReportRequest,
@@ -249,4 +251,14 @@ export function changePassword(currentPassword: string, newPassword: string): Pr
 /** 자체 가입 계정은 password, 소셜 계정은 confirm("탈퇴")으로 본인을 다시 확인한다. */
 export function withdrawAccount(body: { password?: string; confirm?: string }): Promise<void> {
   return sendJson<void>('DELETE', '/api/my/account', body)
+}
+
+// ---- 내 활동 ----
+
+export function fetchMyReviews(signal?: AbortSignal): Promise<MyReview[]> {
+  return getJson<MyReview[]>('/api/my/reviews', signal)
+}
+
+export function fetchMyContentReports(signal?: AbortSignal): Promise<MyContentReport[]> {
+  return getJson<MyContentReport[]>('/api/my/reports', signal)
 }

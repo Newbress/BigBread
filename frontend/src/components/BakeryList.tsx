@@ -51,7 +51,7 @@ export function BakeryListItem({
   }, [selected])
 
   return (
-    <li ref={ref} className="list__row">
+    <li ref={ref} className={selected ? 'list__row list__row--selected' : 'list__row'}>
       <button
         type="button"
         className={selected ? 'card card--selected' : 'card'}
