@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import { fetchBakery } from './api/client.ts'
 import type { BakerySort, BakerySummary, RouteResponse, SearchParams } from './api/types.ts'
 import AuthMenu from './components/AuthMenu.tsx'
 import BakeryDetailPanel from './components/BakeryDetailPanel.tsx'
@@ -8,6 +9,7 @@ import CoursesPanel from './components/CoursesPanel.tsx'
 import FavoritesPanel from './components/FavoritesPanel.tsx'
 import FilterBar from './components/FilterBar.tsx'
 import KakaoMap from './components/KakaoMap.tsx'
+import ReportBakeryDialog, { type ReportBakeryTarget } from './components/ReportBakeryDialog.tsx'
 import RoutePanel from './components/RoutePanel.tsx'
 import { KAKAO_JS_KEY } from './config.ts'
 import { useBakeries } from './hooks/useBakeries.ts'
@@ -37,7 +39,14 @@ export default function App() {
   const [sort, setSort] = useState<BakerySort>('POPULARITY')
   const [radius, setRadius] = useState<number | null>(DEFAULT_RADIUS)
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [view, setView] = useState<View>('list')
+  // 내 계정 등 다른 화면에서 넘어올 때: /?tab=favorites|courses|route 로 탭을, /?bakery=번호 로 빵집 상세를 바로 연다.
+  const [entry] = useState(() => new URLSearchParams(window.location.search))
+  const [view, setView] = useState<View>(() => {
+    const tab = entry.get('tab')
+    return tab === 'favorites' || tab === 'courses' || tab === 'route' ? tab : 'list'
+  })
+  /** 주소로 직접 연 빵집 (목록에 없어도 상세를 보고 담을 수 있게 요약을 따로 들고 있는다) */
+  const [linkedBakery, setLinkedBakery] = useState<BakerySummary | null>(null)
   const [returnView, setReturnView] = useState<TabView>('list')
   const [loginOpen, setLoginOpen] = useState(wantsLoginOnLoad)
 
@@ -46,6 +55,8 @@ export default function App() {
     [district, geo.location, radius, sort],
   )
   const [listVersion, setListVersion] = useState(0)
+  /** 제보 창: undefined면 닫힘, null이면 새 빵집 제보, 값이 있으면 그 빵집에 대한 제보 */
+  const [reportTarget, setReportTarget] = useState<ReportBakeryTarget | undefined>(undefined)
   const { data, loading, error } = useBakeries(params, listVersion)
   const items = useMemo(() => data?.items ?? [], [data])
   const route = useRoute(geo.location)
@@ -54,27 +65,62 @@ export default function App() {
   const basketIds = useMemo(() => new Set(route.basket.map((bakery) => bakery.id)), [route.basket])
 
   // 필터가 바뀌어 결과에서 사라진 빵집은 선택을 풀어 준다.
-  const activeId = selectedId !== null && items.some((bakery) => bakery.id === selectedId) ? selectedId : null
+  const activeId =
+    selectedId !== null && (items.some((bakery) => bakery.id === selectedId) || linkedBakery?.id === selectedId) ? selectedId : null
 
   // 상세는 목록에 없어도 동선에 담았거나 즐겨찾기한 빵집이면 열 수 있다.
   const detailId =
-    selectedId !== null && (activeId !== null || basketIds.has(selectedId) || favorites.ids.has(selectedId))
+    selectedId !== null &&
+    (activeId !== null || basketIds.has(selectedId) || favorites.ids.has(selectedId) || linkedBakery?.id === selectedId)
       ? selectedId
       : null
   const detailSummary =
     detailId === null
       ? undefined
       : (items.find((b) => b.id === detailId) ??
+        (linkedBakery?.id === detailId ? linkedBakery : undefined) ??
         route.basket.find((b) => b.id === detailId) ??
         favorites.items.find((item) => item.bakery.id === detailId)?.bakery)
 
   // 상세는 들어온 화면의 탭 아래에 열린다.
   const tab: TabView = view === 'detail' ? returnView : view
 
+  useEffect(() => {
+    const id = Number(entry.get('bakery'))
+    if (!Number.isInteger(id) || id <= 0) return
+    const controller = new AbortController()
+    fetchBakery(id, controller.signal)
+      .then((detail) => {
+        setLinkedBakery({
+          id: detail.id,
+          name: detail.name,
+          district: detail.district,
+          roadAddress: detail.roadAddress,
+          lat: detail.lat,
+          lng: detail.lng,
+          popularityScore: detail.popularityScore,
+          ratingAvg: detail.ratingAvg,
+          reviewCount: detail.reviewCount,
+          signatureBreads: detail.breads.filter((b) => b.signature).slice(0, 3).map((b) => b.name),
+          distanceMeters: null,
+        })
+        setSelectedId(detail.id)
+        setReturnView('list')
+        setView('detail')
+      })
+      .catch(() => {
+        // 없어졌거나 숨겨진 빵집이면 그냥 목록을 보여 준다.
+      })
+    return () => controller.abort()
+  }, [entry])
+
   const requireLogin = () => {
     if (auth.user) return true
     setLoginOpen(true)
     return false
+  }
+  const openReport = (target: ReportBakeryTarget) => {
+    if (requireLogin()) setReportTarget(target)
   }
   const toggleFavorite = (bakery: BakerySummary) => {
     if (requireLogin()) void favorites.toggle(bakery)
@@ -89,8 +135,15 @@ export default function App() {
 
   const routeResult = view === 'route' ? route.route : null
   const mapBakeries = useMemo(
-    () => (routeResult ? routeResult.stops.map((stop) => stop.bakery) : tab === 'favorites' ? favoriteBakeries : items),
-    [routeResult, tab, favoriteBakeries, items],
+    () =>
+      routeResult
+        ? routeResult.stops.map((stop) => stop.bakery)
+        : tab === 'favorites'
+          ? favoriteBakeries
+          : linkedBakery && !items.some((b) => b.id === linkedBakery.id)
+            ? [...items, linkedBakery]
+            : items,
+    [routeResult, tab, favoriteBakeries, items, linkedBakery],
   )
   const mapSelectedId = routeResult ? null : tab === 'favorites' ? (selectedId !== null && favorites.ids.has(selectedId) ? selectedId : null) : activeId
   const pinColors = useMemo(() => routeResult?.stops.map((stop) => routeColor(stop.seq)), [routeResult])
@@ -219,6 +272,7 @@ export default function App() {
               user={auth.user}
               onLogin={() => setLoginOpen(true)}
               onReviewsChanged={() => setListVersion((n) => n + 1)}
+              onReport={openReport}
             />
           ) : view === 'favorites' ? (
             <FavoritesPanel
@@ -277,6 +331,7 @@ export default function App() {
               onToggleBasket={route.toggle}
               favoriteIds={favorites.ids}
               onToggleFavorite={toggleFavorite}
+              onReportNew={() => openReport(null)}
             />
           )}
         </aside>
@@ -303,6 +358,8 @@ export default function App() {
           )}
         </div>
       </main>
+
+      {reportTarget !== undefined && <ReportBakeryDialog bakery={reportTarget} onClose={() => setReportTarget(undefined)} />}
     </div>
   )
 }

@@ -1,9 +1,11 @@
 package com.bigbread.api.review;
 
+import com.bigbread.api.auth.AccountStatus;
 import com.bigbread.api.bakery.BakeryQueryService;
 import com.bigbread.api.bakery.BakerySummary;
 import com.bigbread.api.common.ApiException;
 import com.bigbread.api.common.PageResponse;
+import com.bigbread.api.report.ContentReportService;
 import com.bigbread.api.review.photo.PhotoService;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
@@ -20,26 +22,35 @@ public class ReviewService {
 
     public static final int MAX_CONTENT_LENGTH = 1000;
 
-    /** 목록에 나가는 리뷰. 작성자는 닉네임만 보이고 내부 ID는 노출하지 않는다. */
+    /**
+     * 목록에 나가는 리뷰. 작성자는 닉네임만 보이고 내부 ID는 노출하지 않는다.
+     * hidden은 신고·운영자 처리로 숨겨진 리뷰를 본인이 볼 때만 true다 (공개 목록에는 숨김 리뷰가 없다).
+     */
     public record Item(long id, int rating, String content, String nickname, boolean mine,
-                       List<PhotoService.Photo> photos, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+                       List<PhotoService.Photo> photos, boolean hidden, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
 
         Item withPhotos(List<PhotoService.Photo> photos) {
-            return new Item(id, rating, content, nickname, mine, photos, createdAt, updatedAt);
+            return new Item(id, rating, content, nickname, mine, photos, hidden, createdAt, updatedAt);
         }
     }
 
-    public record MyReview(long id, BakerySummary bakery, int rating, String content,
-                           OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+    /** 내가 쓴 리뷰 목록의 한 줄. hidden은 신고·운영자 처리로 숨겨진 상태. */
+    public record MyReview(long id, BakerySummary bakery, int rating, String content, List<PhotoService.Photo> photos,
+                           boolean hidden, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
     }
 
     private final JdbcClient jdbc;
     private final BakeryQueryService bakeries;
     private final BakeryStats stats;
     private final PhotoService photos;
+    private final ContentReportService reports;
+    private final AccountStatus accountStatus;
 
-    public ReviewService(JdbcClient jdbc, BakeryQueryService bakeries, BakeryStats stats, PhotoService photos) {
+    public ReviewService(JdbcClient jdbc, BakeryQueryService bakeries, BakeryStats stats, PhotoService photos,
+                         ContentReportService reports, AccountStatus accountStatus) {
+        this.accountStatus = accountStatus;
         this.photos = photos;
+        this.reports = reports;
         this.jdbc = jdbc;
         this.bakeries = bakeries;
         this.stats = stats;
@@ -59,7 +70,7 @@ public class ReviewService {
                         """)
                 .param("b", bakeryId).param("limit", size).param("offset", (long) page * size)
                 .query((rs, n) -> new Item(rs.getLong("id"), rs.getInt("rating"), rs.getString("content"),
-                        rs.getString("nickname"), viewerId != null && viewerId == rs.getLong("user_id"), List.of(),
+                        rs.getString("nickname"), viewerId != null && viewerId == rs.getLong("user_id"), List.of(), false,
                         rs.getObject("created_at", OffsetDateTime.class), rs.getObject("updated_at", OffsetDateTime.class)))
                 .list();
         Map<Long, List<PhotoService.Photo>> byReview = photos.visibleByReview(items.stream().map(Item::id).toList());
@@ -70,13 +81,13 @@ public class ReviewService {
     /** 내가 이 빵집에 쓴 리뷰 (숨김 처리된 것도 본인에게는 보인다). */
     public Optional<Item> mine(long userId, long bakeryId) {
         return jdbc.sql("""
-                        SELECT r.id, r.rating, r.content, u.nickname, r.created_at, r.updated_at
+                        SELECT r.id, r.rating, r.content, u.nickname, r.created_at, r.updated_at, r.status
                           FROM review r JOIN app_user u ON u.id = r.user_id
                          WHERE r.bakery_id = :b AND r.user_id = :u
                         """)
                 .param("b", bakeryId).param("u", userId)
                 .query((rs, n) -> new Item(rs.getLong("id"), rs.getInt("rating"), rs.getString("content"),
-                        rs.getString("nickname"), true, List.of(),
+                        rs.getString("nickname"), true, List.of(), "HIDDEN".equals(rs.getString("status")),
                         rs.getObject("created_at", OffsetDateTime.class), rs.getObject("updated_at", OffsetDateTime.class)))
                 .optional()
                 .map(item -> item.withPhotos(photos.visibleByReview(List.of(item.id())).getOrDefault(item.id(), List.of())));
@@ -84,27 +95,31 @@ public class ReviewService {
 
     /** 내가 쓴 리뷰 전체, 최근에 쓴 순서. 숨김 처리된 빵집의 리뷰는 빠진다. */
     public List<MyReview> listMine(long userId) {
-        record Row(long id, long bakeryId, int rating, String content, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+        record Row(long id, long bakeryId, int rating, String content, boolean hidden, OffsetDateTime createdAt,
+                   OffsetDateTime updatedAt) {
         }
         List<Row> rows = jdbc.sql("""
-                        SELECT id, bakery_id, rating, content, created_at, updated_at FROM review
+                        SELECT id, bakery_id, rating, content, status, created_at, updated_at FROM review
                          WHERE user_id = :u ORDER BY updated_at DESC, id DESC
                         """)
                 .param("u", userId)
                 .query((rs, n) -> new Row(rs.getLong("id"), rs.getLong("bakery_id"), rs.getInt("rating"),
-                        rs.getString("content"), rs.getObject("created_at", OffsetDateTime.class),
-                        rs.getObject("updated_at", OffsetDateTime.class)))
+                        rs.getString("content"), "HIDDEN".equals(rs.getString("status")),
+                        rs.getObject("created_at", OffsetDateTime.class), rs.getObject("updated_at", OffsetDateTime.class)))
                 .list();
+        Map<Long, List<PhotoService.Photo>> photosByReview = photos.visibleByReview(rows.stream().map(Row::id).toList());
         Map<Long, BakerySummary> byId = new HashMap<>();
         bakeries.findSummariesByIds(rows.stream().map(Row::bakeryId).toList()).forEach(b -> byId.put(b.id(), b));
         return rows.stream().filter(r -> byId.containsKey(r.bakeryId()))
-                .map(r -> new MyReview(r.id(), byId.get(r.bakeryId()), r.rating(), r.content(), r.createdAt(), r.updatedAt()))
+                .map(r -> new MyReview(r.id(), byId.get(r.bakeryId()), r.rating(), r.content(),
+                        photosByReview.getOrDefault(r.id(), List.of()), r.hidden(), r.createdAt(), r.updatedAt()))
                 .toList();
     }
 
     /** 처음이면 만들고, 이미 있으면 수정한다 (멱등). 수정하면 숨김 상태는 그대로 유지한다. */
     @Transactional
     public Item save(long userId, long bakeryId, int rating, String content) {
+        accountStatus.requireActive(userId);
         requireVisibleBakery(bakeryId);
         if (rating < 1 || rating > 5) {
             throw ApiException.badRequest("평점은 1~5점이에요.");
@@ -130,6 +145,12 @@ public class ReviewService {
         List<Long> reviewIds = jdbc.sql("SELECT id FROM review WHERE bakery_id = :b AND user_id = :u")
                 .param("b", bakeryId).param("u", userId).query(Long.class).list();
         photos.deleteFilesAfterCommit(reviewIds);
+        if (!reviewIds.isEmpty()) {
+            List<Long> photoIds = jdbc.sql("SELECT id FROM review_photo WHERE review_id IN (:ids)")
+                    .param("ids", reviewIds).query(Long.class).list();
+            reports.closeForDeleted(ContentReportService.TargetType.PHOTO, photoIds);
+            reports.closeForDeleted(ContentReportService.TargetType.REVIEW, reviewIds);
+        }
         int deleted = jdbc.sql("DELETE FROM review WHERE bakery_id = :b AND user_id = :u")
                 .param("b", bakeryId).param("u", userId).update();
         if (deleted > 0) {
