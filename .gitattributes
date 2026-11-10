@@ -1,0 +1,7 @@
+# 윈도에서 받아도 줄바꿈이 CRLF로 바뀌면 안 되는 파일들 (리눅스 컨테이너 안에서 실행되는 스크립트)
+* text=auto
+gradlew text eol=lf
+*.sh text eol=lf
+Dockerfile text eol=lf
+deploy/** text eol=lf
+gradlew.bat text eol=crlf

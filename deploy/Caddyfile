@@ -1,0 +1,36 @@
+# 한 도메인으로 프론트와 API 를 같이 내보낸다 (쿠키·CSRF·소셜 로그인 콜백이 개발 때와 똑같이 동작한다).
+# DOMAIN 환경 변수가 도메인이다. 도메인이 가리키는 서버에서 처음 뜰 때 HTTPS 인증서를 자동으로 받는다.
+# 서버 없이 시험할 때는 DOMAIN=localhost (자체 서명 인증서) 를 쓴다.
+{$DOMAIN:localhost} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(self), camera=(), microphone=()"
+		-Server
+	}
+
+	# 백엔드가 맡는 주소: API, 소셜 로그인 시작/콜백
+	@backend path /api/* /oauth2/* /login/oauth2/*
+	handle @backend {
+		# 사진 한 장 10MB + 여유. 이보다 큰 요청은 서버까지 오지 않고 여기서 막는다.
+		request_body {
+			max_size 12MB
+		}
+		reverse_proxy api:8080
+	}
+
+	# 나머지는 프론트(정적 파일). 없는 경로는 index.html 로 보내 화면 이동(react-router)이 되게 한다.
+	handle {
+		root * /srv
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@index not path /assets/*
+		header @index Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
