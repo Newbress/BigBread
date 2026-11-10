@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { AuthProvider } from '../../api/types.ts'
+import type { AuthOptions, AuthProvider } from '../../api/types.ts'
 import LoginForm from './LoginForm.tsx'
 import { FindIdForm, ForgotPasswordForm } from './RecoveryForms.tsx'
 import SignupForm from './SignupForm.tsx'
@@ -70,8 +70,8 @@ const TITLE: Record<Mode, string> = {
 
 type Props = {
   providers: AuthProvider[]
-  /** 메일을 보낼 수 있어서 가입·찾기를 쓸 수 있는지 */
-  signupEnabled: boolean
+  /** 가입 방식(이메일 인증 필요 여부)과 메일 복구 가능 여부 */
+  options: AuthOptions
   onLogin: (loginId: string, password: string) => Promise<void>
   onClose: () => void
 }
@@ -80,7 +80,7 @@ type Props = {
  * 로그인 창. 열릴 때만 그려지고(닫히면 입력 내용도 함께 사라진다), 브라우저 기본 <dialog>라서
  * 포커스 가두기, Esc 닫기, 뒷배경 처리가 기본으로 된다.
  */
-export default function LoginDialog({ providers, signupEnabled, onLogin, onClose }: Props) {
+export default function LoginDialog({ providers, options, onLogin, onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   const [mode, setMode] = useState<Mode>('login')
   const [signedUpEmail, setSignedUpEmail] = useState('')
@@ -116,7 +116,8 @@ export default function LoginDialog({ providers, signupEnabled, onLogin, onClose
           <>
             <LoginForm
               onLogin={onLogin}
-              showRecovery={signupEnabled}
+              showSignup={options.signupEnabled}
+              showRecovery={options.recoveryEnabled}
               onSignup={() => setMode('signup')}
               onFindId={() => setMode('findId')}
               onForgot={() => setMode('forgot')}
@@ -145,6 +146,8 @@ export default function LoginDialog({ providers, signupEnabled, onLogin, onClose
 
         {mode === 'signup' && (
           <SignupForm
+            emailRequired={options.emailRequired}
+            onLogin={onLogin}
             onBack={backToLogin}
             onDone={(email) => {
               setSignedUpEmail(email)

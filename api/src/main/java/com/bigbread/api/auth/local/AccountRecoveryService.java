@@ -7,6 +7,7 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,10 +31,15 @@ public class AccountRecoveryService {
     private final PasswordEncoder encoder;
     private final AuthMailer mailer;
 
-    public AccountRecoveryService(JdbcClient jdbc, PasswordEncoder encoder, AuthMailer mailer) {
+    /** 메일 없이 가입하는 모드면 이메일이 없으므로 메일 복구 기능을 끈다. */
+    private final boolean openSignup;
+
+    public AccountRecoveryService(JdbcClient jdbc, PasswordEncoder encoder, AuthMailer mailer,
+                                  @Value("${bigbread.auth.signup-mode:email}") String signupMode) {
         this.jdbc = jdbc;
         this.encoder = encoder;
         this.mailer = mailer;
+        this.openSignup = "open".equalsIgnoreCase(signupMode == null ? "" : signupMode.strip());
     }
 
     /**
@@ -73,6 +79,9 @@ public class AccountRecoveryService {
                 .param("hash", Tokens.hash(token))
                 .param("expiresAt", now.plus(RESET_TOKEN_TTL))
                 .update();
+        if (t.email() == null || t.email().isBlank()) {
+            return; // 이메일 없이 가입한 계정: 보낼 곳이 없다 (응답은 똑같이 한다)
+        }
         try {
             mailer.sendPasswordReset(t.email(), t.nickname(), linkBase + "/reset-password?token=" + token, RESET_TOKEN_TTL);
         } catch (RuntimeException e) {
@@ -147,6 +156,9 @@ public class AccountRecoveryService {
 
     /** 비밀번호가 바뀐 뒤 알림 메일. 실패해도 재설정 자체는 성공으로 둔다. */
     public void notifyPasswordChanged(String email) {
+        if (email == null || email.isBlank() || !mailer.available()) {
+            return;
+        }
         try {
             mailer.sendPasswordChanged(email);
         } catch (RuntimeException e) {
@@ -155,7 +167,7 @@ public class AccountRecoveryService {
     }
 
     private void requireMailer() {
-        if (!mailer.available()) {
+        if (openSignup || !mailer.available()) {
             throw ApiException.serviceUnavailable("지금은 이 기능을 사용할 수 없어요.");
         }
     }

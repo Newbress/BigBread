@@ -7,6 +7,7 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -34,15 +35,56 @@ public class LocalAccountService {
     /** 없는 아이디로 로그인을 시도해도 비밀번호 검증과 비슷한 시간이 걸리도록 미리 만들어 둔 해시 */
     private final String dummyHash;
 
-    public LocalAccountService(JdbcClient jdbc, PasswordEncoder encoder, AuthMailer mailer) {
+    /** true 면 메일 인증 없이 아이디·비밀번호만으로 바로 가입한다 (AUTH_SIGNUP_MODE=open). */
+    private final boolean openSignup;
+
+    public LocalAccountService(JdbcClient jdbc, PasswordEncoder encoder, AuthMailer mailer,
+                               @Value("${bigbread.auth.signup-mode:email}") String signupMode) {
         this.jdbc = jdbc;
         this.encoder = encoder;
         this.mailer = mailer;
+        this.openSignup = "open".equalsIgnoreCase(signupMode == null ? "" : signupMode.strip());
         this.dummyHash = encoder.encode("dummy-password-for-timing-equalization");
     }
 
+    /** 메일 없이 바로 가입하는 모드인가. 이 모드에서는 이메일을 받지 않고, 아이디·비밀번호 찾기를 제공하지 않는다. */
+    public boolean openSignup() {
+        return openSignup;
+    }
+
     public boolean signupAvailable() {
-        return mailer.available();
+        return openSignup || mailer.available();
+    }
+
+    /** 메일로 아이디 찾기·비밀번호 재설정을 쓸 수 있는가 (이메일을 저장하는 모드에서만). */
+    public boolean recoveryAvailable() {
+        return !openSignup && mailer.available();
+    }
+
+    /**
+     * 메일 인증 없이 바로 가입한다 (open 모드). 이메일은 저장하지 않는다.
+     *
+     * @return 만든 사용자 ID
+     * @throws ApiException 409: 이미 사용 중인 아이디
+     */
+    @Transactional
+    public long signupOpen(String loginId, String password, String nickname) {
+        if (!openSignup) {
+            throw ApiException.serviceUnavailable("지금은 회원가입을 사용할 수 없어요.");
+        }
+        String passwordHash = encoder.encode(password);
+        long userId = jdbc.sql("INSERT INTO app_user (nickname) VALUES (:nickname) RETURNING id")
+                .param("nickname", nickname).query(Long.class).single();
+        int created = jdbc.sql("""
+                        INSERT INTO local_credential (user_id, login_id, email, password_hash, terms_agreed_at)
+                        VALUES (:userId, :loginId, NULL, :hash, now())
+                        ON CONFLICT DO NOTHING
+                        """)
+                .param("userId", userId).param("loginId", loginId).param("hash", passwordHash).update();
+        if (created == 0) {
+            throw ApiException.conflict("이미 사용 중인 아이디예요.");
+        }
+        return userId;
     }
 
     /**
@@ -53,7 +95,7 @@ public class LocalAccountService {
      */
     @Transactional
     public void requestSignup(String loginId, String email, String password, String nickname, String linkBase) {
-        if (!mailer.available()) {
+        if (openSignup || !mailer.available()) {
             throw ApiException.serviceUnavailable("지금은 회원가입을 사용할 수 없어요.");
         }
         // 이메일 존재 여부와 상관없이 같은 일을 하도록 해시는 항상 먼저 계산한다 (응답 시간 차이를 줄인다).

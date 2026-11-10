@@ -50,6 +50,12 @@ class AdminUserController {
         return service.unsuspend(me.userId(), id);
     }
 
+    /** 비밀번호를 잊은 이용자를 위한 임시 비밀번호 발급. 응답에서 한 번만 보여 준다. */
+    @PostMapping("/{id}/reset-password")
+    AdminUserService.TempPassword resetPassword(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable long id) {
+        return service.resetPassword(me.userId(), id);
+    }
+
     @PostMapping("/{id}/hide-content")
     AdminUserService.Detail hideContent(@AuthenticationPrincipal AppUserPrincipal me, @PathVariable long id,
                                         @RequestBody Map<String, String> body) {

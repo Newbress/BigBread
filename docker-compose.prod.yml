@@ -60,6 +60,8 @@ services:
       PHOTO_S3_ACCESS_KEY: ${PHOTO_S3_ACCESS_KEY:-}
       PHOTO_S3_SECRET_KEY: ${PHOTO_S3_SECRET_KEY:-}
       PHOTO_S3_PATH_STYLE: ${PHOTO_S3_PATH_STYLE:-true}
+      # 가입 방식: email(메일 인증, 메일 설정 필요) | open(메일 없이 아이디·비밀번호만으로 바로 가입)
+      AUTH_SIGNUP_MODE: ${AUTH_SIGNUP_MODE:-email}
       # 메일(SMTP). MAIL_HOST 를 비우면 자체 회원가입·비밀번호 재설정이 꺼진다 (소셜 로그인만)
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}

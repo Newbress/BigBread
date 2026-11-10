@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Duration;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -54,14 +55,18 @@ public class LocalAuthController {
         this.securityContextRepository = securityContextRepository;
     }
 
-    /** @param signupEnabled 메일을 보낼 수 있어서 회원가입·아이디/비밀번호 찾기를 쓸 수 있으면 true */
-    public record Options(boolean signupEnabled) {
+    /**
+     * @param signupEnabled   회원가입을 쓸 수 있으면 true
+     * @param emailRequired   가입할 때 이메일 인증이 필요하면 true (false 면 이메일 없이 바로 가입)
+     * @param recoveryEnabled 메일로 아이디 찾기·비밀번호 재설정을 쓸 수 있으면 true
+     */
+    public record Options(boolean signupEnabled, boolean emailRequired, boolean recoveryEnabled) {
     }
 
     /** 화면이 가입·찾기 메뉴를 보여줄지 정하는 데 쓴다. */
     @GetMapping("/options")
     public Options options() {
-        return new Options(accounts.signupAvailable());
+        return new Options(accounts.signupAvailable(), !accounts.openSignup(), accounts.recoveryAvailable());
     }
 
     public record IdAvailability(boolean available) {
@@ -86,10 +91,20 @@ public class LocalAuthController {
     }
 
     @PostMapping("/signup")
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public Message signup(@RequestBody SignupRequest request, HttpServletRequest httpRequest) {
+    public ResponseEntity<?> signup(@RequestBody SignupRequest request, HttpServletRequest httpRequest,
+                                    HttpServletResponse httpResponse) {
         limits.checkIp("signup", httpRequest, 10, Duration.ofHours(1));
         String loginId = LocalAuthRules.normalizeLoginId(request.loginId());
+        if (accounts.openSignup()) {
+            // 메일 없이 바로 가입: 이메일은 받지 않고, 만들자마자 로그인된 상태로 답한다.
+            firstError(
+                    LocalAuthRules.loginIdError(loginId),
+                    LocalAuthRules.passwordError(request.password(), loginId),
+                    LocalAuthRules.nicknameError(request.nickname()),
+                    request.agreedToTerms() ? null : "이용약관과 개인정보 처리방침에 동의해야 가입할 수 있어요.");
+            long userId = accounts.signupOpen(loginId, request.password(), request.nickname().strip());
+            return ResponseEntity.status(HttpStatus.CREATED).body(startSession(userId, httpRequest, httpResponse));
+        }
         String email = LocalAuthRules.normalizeEmail(request.email());
         firstError(
                 LocalAuthRules.loginIdError(loginId),
@@ -100,7 +115,7 @@ public class LocalAuthController {
 
         accounts.requestSignup(loginId, email, request.password(), request.nickname().strip(), properties.baseUrl());
         // 이미 가입된 이메일이어도 똑같이 답한다.
-        return new Message("인증 메일을 보냈어요. 메일의 링크를 24시간 안에 열어 가입을 완료해 주세요.");
+        return ResponseEntity.accepted().body(new Message("인증 메일을 보냈어요. 메일의 링크를 24시간 안에 열어 가입을 완료해 주세요."));
     }
 
     public record VerifyRequest(@NotBlank String token) {
@@ -130,7 +145,11 @@ public class LocalAuthController {
         if (result.status() != LocalAccountService.LoginStatus.SUCCESS) {
             throw ApiException.unauthorized(LOGIN_FAILED);
         }
-        long userId = result.userId();
+        return startSession(result.userId(), httpRequest, httpResponse);
+    }
+
+    /** 로그인된 세션을 만든다 (세션 ID 재발급 포함). 로그인과 가입 직후 자동 로그인이 함께 쓴다. */
+    private AuthController.Me startSession(long userId, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         UserView user = users.find(userId).orElseThrow(() -> ApiException.unauthorized(LOGIN_FAILED));
 
         AppUserPrincipal principal = new AppUserPrincipal(user.id(), user.role());

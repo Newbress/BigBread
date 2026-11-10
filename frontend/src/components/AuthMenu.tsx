@@ -78,7 +78,7 @@ export default function AuthMenu({
       {open && (
         <LoginDialog
           providers={providers}
-          signupEnabled={options.signupEnabled}
+          options={options}
           onLogin={async (loginId, password) => {
             await onLogin(loginId, password)
             close()
