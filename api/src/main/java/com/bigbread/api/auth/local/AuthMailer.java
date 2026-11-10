@@ -4,8 +4,8 @@ import java.time.Duration;
 
 /**
  * 인증 관련 메일 발송. 구현체를 바꿔 끼울 수 있게 인터페이스로 둔다.
- * 개발: 콘솔 출력({@link ConsoleAuthMailer}), 그 외: 발송 수단이 없으므로 회원가입을 막는다({@link UnavailableAuthMailer}).
- * 운영 SMTP 연동은 이 인터페이스의 구현체를 추가하면 된다.
+ * 개발: 콘솔 출력({@link ConsoleAuthMailer}), SMTP 설정이 있으면 실제 발송({@link SmtpAuthMailer}),
+ * 둘 다 아니면 발송 수단이 없으므로 회원가입을 막는다({@link UnavailableAuthMailer}). 선택은 {@link MailConfig}가 한다.
  */
 public interface AuthMailer {
 

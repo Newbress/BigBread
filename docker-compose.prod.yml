@@ -60,6 +60,14 @@ services:
       PHOTO_S3_ACCESS_KEY: ${PHOTO_S3_ACCESS_KEY:-}
       PHOTO_S3_SECRET_KEY: ${PHOTO_S3_SECRET_KEY:-}
       PHOTO_S3_PATH_STYLE: ${PHOTO_S3_PATH_STYLE:-true}
+      # 메일(SMTP). MAIL_HOST 를 비우면 자체 회원가입·비밀번호 재설정이 꺼진다 (소셜 로그인만)
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SECURITY: ${MAIL_SECURITY:-STARTTLS}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-대빵}
     # PHOTO_STORAGE=local 일 때만 쓰이는 사진 폴더 (기본은 S3 호환 저장소라 비어 있다)
     volumes:
       - uploads:/data/uploads
