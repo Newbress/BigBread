@@ -123,8 +123,12 @@ export type RouteRequest = {
   order: RouteOrder
 }
 
-/** 메일을 보낼 수 있어서 회원가입·아이디/비밀번호 찾기를 쓸 수 있으면 signupEnabled */
-export type AuthOptions = { signupEnabled: boolean }
+/**
+ * signupEnabled: 회원가입을 쓸 수 있음 / collectEmail: 가입할 때 이메일을 받음
+ * verifyEmail: 이메일 인증 링크를 열어야 가입이 끝남(false 면 바로 가입·로그인)
+ * recoveryEnabled: 메일로 아이디 찾기·비밀번호 재설정을 쓸 수 있음
+ */
+export type AuthOptions = { signupEnabled: boolean; collectEmail: boolean; verifyEmail: boolean; recoveryEnabled: boolean }
 
 export type SignupRequest = {
   loginId: string

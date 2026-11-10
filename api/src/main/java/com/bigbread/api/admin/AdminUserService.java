@@ -2,12 +2,16 @@ package com.bigbread.api.admin;
 
 import com.bigbread.api.common.ApiException;
 import com.bigbread.api.common.PageResponse;
+import com.bigbread.api.auth.local.LocalAuthRules;
+import com.bigbread.api.auth.local.SessionInvalidator;
 import com.bigbread.api.review.BakeryStats;
+import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,11 +37,81 @@ public class AdminUserService {
     private final JdbcClient jdbc;
     private final BakeryStats stats;
     private final AdminAudit audit;
+    private final PasswordEncoder encoder;
+    private final SessionInvalidator sessions;
 
-    public AdminUserService(JdbcClient jdbc, BakeryStats stats, AdminAudit audit) {
+    public AdminUserService(JdbcClient jdbc, BakeryStats stats, AdminAudit audit, PasswordEncoder encoder,
+                            SessionInvalidator sessions) {
         this.jdbc = jdbc;
         this.stats = stats;
         this.audit = audit;
+        this.encoder = encoder;
+        this.sessions = sessions;
+    }
+
+    /** 임시 비밀번호에 쓰는 글자 (헷갈리는 0/O, 1/l/I 는 뺀다). */
+    private static final String TEMP_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz";
+    private static final String TEMP_DIGITS = "23456789";
+    private static final String TEMP_SPECIAL = "!@#$%^*+=?";
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    public record TempPassword(String loginId, String temporaryPassword) {
+    }
+
+    /**
+     * 비밀번호를 잊은 이용자를 위해 임시 비밀번호로 초기화한다 (메일로 복구할 수 없는 계정용).
+     * 새 비밀번호는 이 응답에서 한 번만 보여 주고, 모든 기기의 로그인과 잠금·남은 재설정 링크를 정리한다.
+     * 관리자 계정과 소셜 로그인 계정(자체 비밀번호가 없음)은 대상이 아니다.
+     */
+    @Transactional
+    public TempPassword resetPassword(long adminId, long userId) {
+        Row user = get(userId).user();
+        if (user.loginId() == null) {
+            throw ApiException.badRequest("아이디/비밀번호로 가입한 계정만 초기화할 수 있어요.");
+        }
+        if ("ADMIN".equals(user.role())) {
+            throw ApiException.badRequest("관리자 계정의 비밀번호는 초기화할 수 없어요.");
+        }
+        String password = newTemporaryPassword(user.loginId());
+        jdbc.sql("""
+                        UPDATE local_credential
+                           SET password_hash = :hash, failed_attempts = 0, locked_until = NULL, updated_at = now()
+                         WHERE user_id = :id
+                        """)
+                .param("hash", encoder.encode(password)).param("id", userId).update();
+        jdbc.sql("DELETE FROM auth_token WHERE user_id = :id AND purpose = 'PASSWORD_RESET'").param("id", userId).update();
+        sessions.invalidateAll(userId);
+        audit.record(adminId, "USER_RESET_PASSWORD", "USER", userId, user.nickname() + " (" + user.loginId() + ")");
+        return new TempPassword(user.loginId(), password);
+    }
+
+    /** 가입 비밀번호 규칙(영문·숫자·특수문자 포함, 아이디 미포함)을 만족하는 12자 무작위 비밀번호. */
+    static String newTemporaryPassword(String loginId) {
+        String all = TEMP_LETTERS + TEMP_DIGITS + TEMP_SPECIAL;
+        while (true) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(TEMP_LETTERS.charAt(RANDOM.nextInt(TEMP_LETTERS.length())));
+            sb.append(TEMP_DIGITS.charAt(RANDOM.nextInt(TEMP_DIGITS.length())));
+            sb.append(TEMP_SPECIAL.charAt(RANDOM.nextInt(TEMP_SPECIAL.length())));
+            for (int i = 0; i < 9; i++) {
+                sb.append(all.charAt(RANDOM.nextInt(all.length())));
+            }
+            String candidate = shuffle(sb.toString());
+            if (LocalAuthRules.passwordError(candidate, loginId) == null) {
+                return candidate;
+            }
+        }
+    }
+
+    private static String shuffle(String text) {
+        char[] chars = text.toCharArray();
+        for (int i = chars.length - 1; i > 0; i--) {
+            int j = RANDOM.nextInt(i + 1);
+            char tmp = chars[i];
+            chars[i] = chars[j];
+            chars[j] = tmp;
+        }
+        return new String(chars);
     }
 
     private static final String SELECT = """

@@ -60,6 +60,9 @@ export const suspendUser = (id: number, reason: string) =>
 
 export const unsuspendUser = (id: number) => sendJson<AdminUserDetail>('POST', `/api/admin/users/${id}/unsuspend`, {})
 
+export const resetUserPassword = (id: number) =>
+  sendJson<{ loginId: string; temporaryPassword: string }>('POST', `/api/admin/users/${id}/reset-password`, {})
+
 export const hideUserContent = (id: number, reason: string) =>
   sendJson<AdminUserDetail>('POST', `/api/admin/users/${id}/hide-content`, { reason })
 

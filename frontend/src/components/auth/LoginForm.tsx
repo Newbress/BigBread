@@ -5,13 +5,14 @@ import PasswordInput from './PasswordInput.tsx'
 
 type Props = {
   onLogin: (loginId: string, password: string) => Promise<void>
+  showSignup: boolean
   showRecovery: boolean
   onSignup: () => void
   onFindId: () => void
   onForgot: () => void
 }
 
-export default function LoginForm({ onLogin, showRecovery, onSignup, onFindId, onForgot }: Props) {
+export default function LoginForm({ onLogin, showSignup, showRecovery, onSignup, onFindId, onForgot }: Props) {
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -63,11 +64,13 @@ export default function LoginForm({ onLogin, showRecovery, onSignup, onFindId, o
         {busy ? '로그인 중…' : '로그인'}
       </button>
       <div className="auth-form__links">
+        {showSignup && (
+          <button type="button" className="link-btn" onClick={onSignup}>
+            회원가입
+          </button>
+        )}
         {showRecovery && (
           <>
-            <button type="button" className="link-btn" onClick={onSignup}>
-              회원가입
-            </button>
             <button type="button" className="link-btn" onClick={onFindId}>
               아이디 찾기
             </button>

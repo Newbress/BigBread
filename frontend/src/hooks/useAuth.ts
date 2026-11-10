@@ -9,7 +9,7 @@ type State = {
   user: User | null
 }
 
-const NO_OPTIONS: AuthOptions = { signupEnabled: false }
+const NO_OPTIONS: AuthOptions = { signupEnabled: false, collectEmail: true, verifyEmail: true, recoveryEnabled: false }
 
 /** 로그인 상태와 로그인 방법을 한 번 불러온다. 실패하면 비로그인으로 둔다(지도는 계속 쓸 수 있어야 한다). */
 export function useAuth() {

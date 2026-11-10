@@ -59,6 +59,9 @@ bigbread:
   auth:
     # 사용자가 접속하는 주소. 제공자 콘솔에 등록할 리다이렉트 URI는 {base-url}/login/oauth2/code/{kakao|naver|google}
     base-url: ${APP_BASE_URL:http://localhost:5173}
+    # 자체 가입 방식. email: 메일 인증 후 가입(메일 설정 필요) / open: 메일 없이 아이디·비밀번호만으로 바로 가입
+    # (open 이면 이메일을 받지 않아 아이디·비밀번호 찾기가 없고, 비밀번호는 운영자가 임시 비밀번호로 초기화해 준다)
+    signup-mode: ${AUTH_SIGNUP_MODE:email}
     # 클라이언트 ID가 비어 있는 제공자는 로그인 버튼이 나오지 않는다. (카카오 클라이언트 ID = REST API 키)
     kakao:
       client-id: ${KAKAO_REST_API_KEY:}

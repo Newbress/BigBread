@@ -116,8 +116,9 @@ export function checkLoginId(loginId: string, signal?: AbortSignal): Promise<{ a
   return getJson<{ available: boolean }>(`/api/auth/id-available?loginId=${encodeURIComponent(loginId)}`, signal)
 }
 
-export function signup(request: SignupRequest): Promise<Message> {
-  return postJson<Message>('/api/auth/signup', request)
+/** 이메일 인증 모드면 안내 메시지, 메일 없는 모드면 가입과 동시에 로그인된 상태(Me)가 돌아온다. */
+export function signup(request: SignupRequest): Promise<Message | Me> {
+  return postJson<Message | Me>('/api/auth/signup', request)
 }
 
 export function verifyEmail(token: string, signal?: AbortSignal): Promise<void> {

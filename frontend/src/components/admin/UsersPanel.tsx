@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { fetchAdminUser, hideUserContent, searchAdminUsers, suspendUser, unsuspendUser } from '../../api/admin.ts'
+import { fetchAdminUser, hideUserContent, resetUserPassword, searchAdminUsers, suspendUser, unsuspendUser } from '../../api/admin.ts'
 import type { AdminUserDetail } from '../../api/adminTypes.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
 import { formatDateTime } from '../../lib/format.ts'
@@ -13,6 +13,20 @@ function UserDetail({ detail, onChanged }: { detail: AdminUserDetail; onChanged:
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [temp, setTemp] = useState<string | null>(null)
+
+  async function issueTemporaryPassword() {
+    setBusy(true)
+    setError(null)
+    try {
+      const result = await resetUserPassword(user.id)
+      setTemp(result.temporaryPassword)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '임시 비밀번호를 만들지 못했어요.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function run(action: () => Promise<unknown>) {
     setBusy(true)
@@ -80,6 +94,22 @@ function UserDetail({ detail, onChanged }: { detail: AdminUserDetail; onChanged:
             />
           </div>
           <p className="card__meta">정지하면 로그인·조회는 되지만 리뷰·사진·제보·신고를 쓸 수 없어요. 숨긴 글은 신고 화면 &lsquo;처리됨&rsquo;에서 하나씩 풀 수 있어요.</p>
+        </div>
+      )}
+      {user.role !== 'ADMIN' && user.loginId && (
+        <div className="admin-actions">
+          <ConfirmButton
+            label="임시 비밀번호 발급"
+            confirmLabel="정말 발급 (기존 비밀번호·로그인 해제)"
+            disabled={busy}
+            onConfirm={() => void issueTemporaryPassword()}
+          />
+          <p className="card__meta">비밀번호를 잊은 이용자용이에요. 발급하면 모든 기기의 로그인이 풀리고, 새 비밀번호는 아래에 한 번만 보여요.</p>
+          {temp && (
+            <p className="notice" role="status">
+              임시 비밀번호: <code>{temp}</code> — 이용자에게 전달하고 로그인 후 바로 바꾸도록 안내해 주세요. 이 창을 닫으면 다시 볼 수 없어요.
+            </p>
+          )}
         </div>
       )}
       <ErrorNote message={error} />
