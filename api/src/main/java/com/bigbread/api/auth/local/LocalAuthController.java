@@ -37,6 +37,8 @@ public class LocalAuthController {
     static final String LOGIN_FAILED = "아이디 또는 비밀번호가 올바르지 않아요.";
 
     private final LocalAccountService accounts;
+    private final IdentityAccountService identityAccounts;
+    private final IdentityVerifier identityProvider;
     private final UserAccountService users;
     private final AuthProperties properties;
     private final AuthRateLimits limits;
@@ -44,10 +46,13 @@ public class LocalAuthController {
     private final SecurityContextRepository securityContextRepository;
     private final SecurityContextHolderStrategy holderStrategy = SecurityContextHolder.getContextHolderStrategy();
 
-    public LocalAuthController(LocalAccountService accounts, UserAccountService users, AuthProperties properties,
+    public LocalAuthController(LocalAccountService accounts, IdentityAccountService identityAccounts,
+                               IdentityVerifier identityProvider, UserAccountService users, AuthProperties properties,
                                AuthRateLimits limits, SessionAuthenticationStrategy sessionStrategy,
                                SecurityContextRepository securityContextRepository) {
         this.accounts = accounts;
+        this.identityAccounts = identityAccounts;
+        this.identityProvider = identityProvider;
         this.users = users;
         this.properties = properties;
         this.limits = limits;
@@ -60,15 +65,18 @@ public class LocalAuthController {
      * @param collectEmail    가입할 때 이메일을 받으면 true
      * @param verifyEmail     가입할 때 이메일 인증 링크가 필요하면 true (false 면 인증 없이 바로 가입)
      * @param recoveryEnabled 메일로 아이디 찾기·비밀번호 재설정을 쓸 수 있으면 true
+     * @param verifyIdentity  휴대폰 본인확인(PASS)으로 가입하고, 아이디·비밀번호 찾기도 본인확인으로 하면 true
+     * @param identityProvider 본인확인 제공자 이름 (화면이 어떤 인증창을 열지 정한다)
      */
-    public record Options(boolean signupEnabled, boolean collectEmail, boolean verifyEmail, boolean recoveryEnabled) {
+    public record Options(boolean signupEnabled, boolean collectEmail, boolean verifyEmail, boolean recoveryEnabled,
+                           boolean verifyIdentity, String identityProvider) {
     }
 
     /** 화면이 가입·찾기 메뉴를 보여줄지 정하는 데 쓴다. */
     @GetMapping("/options")
     public Options options() {
         return new Options(accounts.signupAvailable(), accounts.mode().collectsEmail(), accounts.mode().verifiesEmail(),
-                accounts.recoveryAvailable());
+                accounts.recoveryAvailable(), accounts.mode() == SignupMode.PASS, identityProvider.provider());
     }
 
     public record IdAvailability(boolean available) {
@@ -86,7 +94,8 @@ public class LocalAuthController {
         return new IdAvailability(!accounts.loginIdTaken(normalized));
     }
 
-    public record SignupRequest(String loginId, String email, String password, String nickname, boolean agreedToTerms) {
+    public record SignupRequest(String loginId, String email, String password, String nickname, boolean agreedToTerms,
+                                String identityTicket) {
     }
 
     public record Message(String message) {
@@ -97,6 +106,16 @@ public class LocalAuthController {
                                     HttpServletResponse httpResponse) {
         limits.checkIp("signup", httpRequest, 10, Duration.ofHours(1));
         String loginId = LocalAuthRules.normalizeLoginId(request.loginId());
+        if (accounts.mode() == SignupMode.PASS) {
+            // 본인확인을 마친 사람만: 확인표(identityTicket)가 있어야 하고, 이메일은 받지 않는다.
+            firstError(
+                    LocalAuthRules.loginIdError(loginId),
+                    LocalAuthRules.passwordError(request.password(), loginId),
+                    LocalAuthRules.nicknameError(request.nickname()),
+                    request.agreedToTerms() ? null : "이용약관과 개인정보 처리방침에 동의해야 가입할 수 있어요.");
+            long userId = identityAccounts.signup(request.identityTicket(), loginId, request.password(), request.nickname().strip());
+            return ResponseEntity.status(HttpStatus.CREATED).body(startSession(userId, httpRequest, httpResponse));
+        }
         if (accounts.mode().direct()) {
             // 이메일 인증 없이 바로 가입: 만들자마자 로그인된 상태로 답한다. (INSTANT 는 이메일을 받아 두고 복구 메일에만 쓴다)
             String email = accounts.mode().collectsEmail() ? LocalAuthRules.normalizeEmail(request.email()) : null;

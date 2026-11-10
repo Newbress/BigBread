@@ -39,7 +39,7 @@ public class AccountRecoveryService {
         this.jdbc = jdbc;
         this.encoder = encoder;
         this.mailer = mailer;
-        this.openSignup = SignupMode.parse(signupMode) == SignupMode.OPEN;
+        this.openSignup = !SignupMode.parse(signupMode).collectsEmail();
     }
 
     /**

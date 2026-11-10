@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AuthOptions, AuthProvider } from '../../api/types.ts'
 import LoginForm from './LoginForm.tsx'
+import { IdentityFindIdForm, IdentityResetForm } from './IdentityForms.tsx'
 import { FindIdForm, ForgotPasswordForm } from './RecoveryForms.tsx'
 import SignupForm from './SignupForm.tsx'
 
@@ -117,7 +118,7 @@ export default function LoginDialog({ providers, options, onLogin, onClose }: Pr
             <LoginForm
               onLogin={onLogin}
               showSignup={options.signupEnabled}
-              showRecovery={options.recoveryEnabled}
+              showRecovery={options.recoveryEnabled || options.verifyIdentity}
               onSignup={() => setMode('signup')}
               onFindId={() => setMode('findId')}
               onForgot={() => setMode('forgot')}
@@ -148,6 +149,7 @@ export default function LoginDialog({ providers, options, onLogin, onClose }: Pr
           <SignupForm
             collectEmail={options.collectEmail}
             verifyEmail={options.verifyEmail}
+            identityProvider={options.verifyIdentity ? options.identityProvider : null}
             onLogin={onLogin}
             onBack={backToLogin}
             onDone={(email) => {
@@ -169,8 +171,18 @@ export default function LoginDialog({ providers, options, onLogin, onClose }: Pr
           </div>
         )}
 
-        {mode === 'findId' && <FindIdForm onBack={backToLogin} />}
-        {mode === 'forgot' && <ForgotPasswordForm onBack={backToLogin} />}
+        {mode === 'findId' &&
+          (options.verifyIdentity ? (
+            <IdentityFindIdForm provider={options.identityProvider} onBack={backToLogin} />
+          ) : (
+            <FindIdForm onBack={backToLogin} />
+          ))}
+        {mode === 'forgot' &&
+          (options.verifyIdentity ? (
+            <IdentityResetForm provider={options.identityProvider} onBack={backToLogin} />
+          ) : (
+            <ForgotPasswordForm onBack={backToLogin} />
+          ))}
       </div>
     </dialog>
   )

@@ -128,7 +128,16 @@ export type RouteRequest = {
  * verifyEmail: 이메일 인증 링크를 열어야 가입이 끝남(false 면 바로 가입·로그인)
  * recoveryEnabled: 메일로 아이디 찾기·비밀번호 재설정을 쓸 수 있음
  */
-export type AuthOptions = { signupEnabled: boolean; collectEmail: boolean; verifyEmail: boolean; recoveryEnabled: boolean }
+export type AuthOptions = {
+  signupEnabled: boolean
+  collectEmail: boolean
+  verifyEmail: boolean
+  recoveryEnabled: boolean
+  /** 휴대폰 본인확인(PASS)으로 가입하고, 아이디·비밀번호 찾기도 본인확인으로 함 */
+  verifyIdentity: boolean
+  /** 본인확인 제공자 이름 (fake 는 개발용) */
+  identityProvider: string
+}
 
 export type SignupRequest = {
   loginId: string
@@ -136,7 +145,11 @@ export type SignupRequest = {
   password: string
   nickname: string
   agreedToTerms: boolean
+  /** 본인확인(PASS) 가입에서 본인확인 뒤 받은 1회용 확인표 */
+  identityTicket?: string
 }
+
+export type IdentityPurpose = 'SIGNUP' | 'RESET' | 'FIND_ID'
 
 export type Message = { message: string }
 

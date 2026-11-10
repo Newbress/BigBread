@@ -2,6 +2,7 @@ import { readCookie } from '../lib/cookie.ts'
 import type {
   AccountInfo,
   AuthOptions,
+  IdentityPurpose,
   AuthProvider,
   BakeryDetail,
   BakerySummary,
@@ -135,6 +136,19 @@ export function forgotPassword(loginId: string): Promise<Message> {
 
 export function resetPassword(token: string, newPassword: string): Promise<void> {
   return postJson<void>('/api/auth/password/reset', { token, newPassword })
+}
+
+/** 브라우저에서 본인 인증을 마친 뒤 받은 인증 ID 를 서버에 확인받고, 1회용 확인표(10분)를 받는다. */
+export function verifyIdentity(purpose: IdentityPurpose, verificationId: string): Promise<{ ticket: string; expiresInSeconds: number }> {
+  return postJson('/api/auth/identity', { purpose, verificationId })
+}
+
+export function resetPasswordByIdentity(ticket: string, loginId: string, newPassword: string): Promise<void> {
+  return postJson<void>('/api/auth/password/reset-by-identity', { ticket, loginId, newPassword })
+}
+
+export function findLoginIdByIdentity(ticket: string): Promise<{ loginId: string }> {
+  return postJson<{ loginId: string }>('/api/auth/find-id-by-identity', { ticket })
 }
 
 export function findLoginId(email: string): Promise<Message> {

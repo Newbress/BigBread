@@ -190,6 +190,7 @@ http://localhost:5173/login/oauth2/code/google
 - 비밀번호는 Argon2id로 해시해 저장하고(`{argon2}` 접두사로 알고리즘 교체 가능), 인증 토큰은 SHA-256 해시만 저장한다. 로그인하면 세션 ID를 새로 발급한다.
 - **메일 발송**: 개발(`dev` 프로필)에서는 인증 링크를 **서버 로그에 출력**한다. 그 외 환경은 `MAIL_HOST`(SMTP)가 설정돼 있어야 메일이 나가고, 없으면 회원가입이 `503`으로 막힌다 (소셜 로그인은 그대로). 설정 방법은 `deploy/README.md`의 "메일 설정".
 - **가입 방식** (`AUTH_SIGNUP_MODE`): `email`(기본, 메일 인증 후 가입) / `instant`(이메일은 받되 인증 없이 바로 가입·로그인, 이메일은 복구 메일에만 사용, 같은 이메일 중복은 409) / `open`(이메일을 받지 않고 바로 가입, `local_credential.email` NULL 허용(V8)). `instant`·`open` 은 `POST /api/auth/signup` 이 201 + 로그인 상태로 답한다. `open` 은 아이디 찾기·비밀번호 재설정이 `503` 이라 비밀번호를 잊으면 관리자가 `POST /api/admin/users/{id}/reset-password`(임시 비밀번호 발급, 모든 세션 해제, 작업 기록)로 돕는다. `GET /api/auth/options` 의 `collectEmail`·`verifyEmail`·`recoveryEnabled` 로 화면이 가입 폼과 찾기 메뉴를 정한다.
+- **본인확인(PASS) 모드** (`AUTH_SIGNUP_MODE=pass`): 브라우저에서 휴대폰 본인 인증을 마치면 `POST /api/auth/identity`(용도 SIGNUP·RESET·FIND_ID)가 서버에서 인증 대행사(`IdentityVerifier`)에 결과를 확인하고 **1회용 확인표(10분)**를 준다. 가입은 `POST /api/auth/signup`에 `identityTicket`을 실어 보내고(만 14세 이상, 한 사람 한 계정), 비밀번호는 `POST /api/auth/password/reset-by-identity`(가입한 사람과 같을 때만, 모든 기기 로그인 해제), 아이디는 `POST /api/auth/find-id-by-identity`로 찾는다. 연계정보(DI)는 서버 비밀값(`PASS_DI_PEPPER`)으로 해시한 값만 `local_credential.di_hash`(V9)에 저장한다. 현재 제공자는 개발용 `fake`(`IDENTITY_PROVIDER=fake`, 인증 ID `fake:<값>:<생년월일>`)뿐이고, 실제 대행사 연동은 계약 뒤에 추가한다.
 - 아직 없는 것: 비밀번호 변경·회원 탈퇴(4단계).
 
 ### 화면
