@@ -36,9 +36,12 @@ public class LocalAccountService {
     private final String dummyHash;
 
     private final SignupMode mode;
+    private final IdentityVerifier identity;
 
     public LocalAccountService(JdbcClient jdbc, PasswordEncoder encoder, AuthMailer mailer,
+                               IdentityVerifier identity,
                                @Value("${bigbread.auth.signup-mode:email}") String signupMode) {
+        this.identity = identity;
         this.jdbc = jdbc;
         this.encoder = encoder;
         this.mailer = mailer;
@@ -51,7 +54,11 @@ public class LocalAccountService {
     }
 
     public boolean signupAvailable() {
-        return !mode.collectsEmail() || mailer.available();
+        return switch (mode) {
+            case EMAIL, INSTANT -> mailer.available();
+            case PASS -> identity.available();
+            case OPEN -> true;
+        };
     }
 
     /** 메일로 아이디 찾기·비밀번호 재설정을 쓸 수 있는가 (이메일을 저장하는 모드에서만). */

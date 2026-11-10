@@ -73,6 +73,21 @@ class ProductionChecksTest {
     }
 
     @Test
+    void 본인확인은_가상_제공자를_막고_pass_방식이면_제공자와_비밀값을_요구한다() {
+        Map<String, String> p = good();
+        p.put("bigbread.identity.provider", "fake");
+        assertThat(String.join("\n", check(p, "prod"))).contains("fake");
+
+        p = good();
+        p.put("bigbread.auth.signup-mode", "pass");
+        assertThat(String.join("\n", check(p, "prod"))).contains("IDENTITY_PROVIDER").contains("PASS_DI_PEPPER");
+
+        p.put("bigbread.identity.provider", "someprovider");
+        p.put("bigbread.identity.di-pepper", "x".repeat(32));
+        assertThat(check(p, "prod")).isEmpty();
+    }
+
+    @Test
     void 메일을_켰다면_보내는_주소가_있어야_하고_암호화되어야_한다() {
         Map<String, String> p = good();
         p.put("bigbread.mail.host", "smtp.example.com");

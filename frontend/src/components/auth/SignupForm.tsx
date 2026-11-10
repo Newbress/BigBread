@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { checkLoginId, signup } from '../../api/client.ts'
 import { emailError, loginIdError, nicknameError, PASSWORD_HINT, passwordError } from '../../lib/authRules.ts'
 import FormField from './FormField.tsx'
+import IdentityStep from './IdentityStep.tsx'
 import PasswordInput from './PasswordInput.tsx'
 
 type Availability = { id: string; state: 'checking' | 'available' | 'taken' | 'error' } | null
@@ -12,12 +13,14 @@ type Props = {
   collectEmail: boolean
   /** true 면 인증 메일을 보내고, false 면 바로 가입하고 로그인한다 */
   verifyEmail: boolean
+  /** 휴대폰 본인확인(PASS)으로 가입할 때 제공자 이름. null 이면 본인확인을 쓰지 않는다 */
+  identityProvider: string | null
   onLogin: (loginId: string, password: string) => Promise<void>
   onBack: () => void
   onDone: (email: string) => void
 }
 
-export default function SignupForm({ collectEmail, verifyEmail, onLogin, onBack, onDone }: Props) {
+export default function SignupForm({ collectEmail, verifyEmail, identityProvider, onLogin, onBack, onDone }: Props) {
   const [loginId, setLoginId] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,6 +31,8 @@ export default function SignupForm({ collectEmail, verifyEmail, onLogin, onBack,
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // 본인확인 가입: 인증을 마쳐 확인표를 받은 뒤에야 입력 폼이 나온다
+  const [ticket, setTicket] = useState<string | null>(null)
 
   const touch = (name: string) => setTouched((current) => ({ ...current, [name]: true }))
 
@@ -89,6 +94,7 @@ export default function SignupForm({ collectEmail, verifyEmail, onLogin, onBack,
         password,
         nickname: nickname.trim(),
         agreedToTerms: agreed,
+        ...(ticket ? { identityTicket: ticket } : {}),
       })
       if (verifyEmail) {
         onDone(email.trim())
@@ -99,6 +105,15 @@ export default function SignupForm({ collectEmail, verifyEmail, onLogin, onBack,
       setSubmitError(e instanceof Error ? e.message : '가입 요청에 실패했어요.')
       setBusy(false)
     }
+  }
+
+  if (identityProvider && !ticket) {
+    return (
+      <div className="auth-form">
+        <p>가입하려면 먼저 휴대폰 본인 인증(PASS)이 필요해요. 한 사람이 한 계정만 만들 수 있고, 만 14세 이상만 가입할 수 있어요.</p>
+        <IdentityStep provider={identityProvider} purpose="SIGNUP" onTicket={setTicket} onCancel={onBack} />
+      </div>
+    )
   }
 
   return (
@@ -194,9 +209,23 @@ export default function SignupForm({ collectEmail, verifyEmail, onLogin, onBack,
           <summary>내용 보기</summary>
           <dl className="consent__table">
             <dt>수집 항목</dt>
-            <dd>{collectEmail ? '아이디, 이메일, 비밀번호(암호화해 저장), 닉네임' : '아이디, 비밀번호(암호화해 저장), 닉네임'}</dd>
+            <dd>
+              {collectEmail
+                ? '아이디, 이메일, 비밀번호(암호화해 저장), 닉네임'
+                : identityProvider
+                  ? '아이디, 비밀번호(암호화해 저장), 닉네임, 본인 인증 정보(복원할 수 없는 해시값만 저장, 이름·생년월일·전화번호는 저장 안 함)'
+                  : '아이디, 비밀번호(암호화해 저장), 닉네임'}
+            </dd>
             <dt>이용 목적</dt>
-            <dd>{collectEmail ? (verifyEmail ? '회원 식별, 로그인, 이메일 인증, 아이디·비밀번호 찾기' : '회원 식별, 로그인, 아이디·비밀번호 찾기') : '회원 식별, 로그인'}</dd>
+            <dd>
+              {collectEmail
+                ? verifyEmail
+                  ? '회원 식별, 로그인, 이메일 인증, 아이디·비밀번호 찾기'
+                  : '회원 식별, 로그인, 아이디·비밀번호 찾기'
+                : identityProvider
+                  ? '회원 식별, 로그인, 중복 가입 방지, 본인 인증을 통한 아이디·비밀번호 찾기'
+                  : '회원 식별, 로그인'}
+            </dd>
             <dt>보유 기간</dt>
             <dd>회원 탈퇴 시까지</dd>
           </dl>
@@ -205,7 +234,9 @@ export default function SignupForm({ collectEmail, verifyEmail, onLogin, onBack,
 
       {!collectEmail && (
         <p className="login-dialog__note">
-          이메일을 받지 않는 대신 비밀번호를 잊으면 스스로 찾을 수 없어요. 비밀번호는 꼭 기억해 두세요. 잊었다면 운영자에게 문의하면 임시 비밀번호를 받을 수 있어요.
+          {identityProvider
+            ? '본인 인증은 가입이 끝나면 더 이상 필요하지 않아요. 비밀번호를 잊으면 같은 본인 인증으로 다시 정할 수 있어요.'
+            : '이메일을 받지 않는 대신 비밀번호를 잊으면 스스로 찾을 수 없어요. 비밀번호는 꼭 기억해 두세요. 잊었다면 운영자에게 문의하면 임시 비밀번호를 받을 수 있어요.'}
         </p>
       )}
 

@@ -88,6 +88,22 @@ class ProductionChecks {
                 problems.add("MAIL_SECURITY=NONE 은 운영에서 쓸 수 없어요. (STARTTLS 또는 SSL)");
             }
         }
+        // 본인확인: 가상(fake) 제공자는 운영에서 금지, pass 가입 방식이면 실제 제공자와 충분히 긴 비밀값이 필요하다.
+        String identityProvider = property.apply("bigbread.identity.provider");
+        boolean fake = identityProvider != null && "fake".equalsIgnoreCase(identityProvider.strip());
+        if (fake) {
+            problems.add("IDENTITY_PROVIDER=fake 는 개발·시험용이라 운영에서 쓸 수 없어요. 누구나 본인 인증을 통과해요.");
+        }
+        String signupMode = property.apply("bigbread.auth.signup-mode");
+        if (signupMode != null && "pass".equalsIgnoreCase(signupMode.strip())) {
+            if (isBlank(identityProvider) || "none".equalsIgnoreCase(identityProvider.strip())) {
+                problems.add("AUTH_SIGNUP_MODE=pass 인데 IDENTITY_PROVIDER 가 비어 있어요. 본인확인 제공자를 설정해 주세요.");
+            }
+            String pepper = property.apply("bigbread.identity.di-pepper");
+            if (pepper == null || pepper.length() < 32) {
+                problems.add("PASS_DI_PEPPER 는 32자 이상의 무작위 값이어야 해요. (본인확인 정보를 해시할 때 쓰는 비밀값, 한 번 정하면 바꾸지 마세요)");
+            }
+        }
         return problems;
     }
 

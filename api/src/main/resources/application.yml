@@ -59,8 +59,8 @@ bigbread:
   auth:
     # 사용자가 접속하는 주소. 제공자 콘솔에 등록할 리다이렉트 URI는 {base-url}/login/oauth2/code/{kakao|naver|google}
     base-url: ${APP_BASE_URL:http://localhost:5173}
-    # 자체 가입 방식. email: 메일 인증 후 가입(메일 설정 필요) / open: 메일 없이 아이디·비밀번호만으로 바로 가입
-    # (open 이면 이메일을 받지 않아 아이디·비밀번호 찾기가 없고, 비밀번호는 운영자가 임시 비밀번호로 초기화해 준다)
+    # 자체 가입 방식. email: 메일 인증 후 가입 / instant: 이메일은 받되 인증 없이 바로 가입 /
+    # open: 이메일 없이 바로 가입(비밀번호는 운영자가 임시 비밀번호로 초기화) / pass: 휴대폰 본인확인(PASS)으로 가입·찾기
     signup-mode: ${AUTH_SIGNUP_MODE:email}
     # 클라이언트 ID가 비어 있는 제공자는 로그인 버튼이 나오지 않는다. (카카오 클라이언트 ID = REST API 키)
     kakao:
@@ -72,6 +72,15 @@ bigbread:
     google:
       client-id: ${GOOGLE_CLIENT_ID:}
       client-secret: ${GOOGLE_CLIENT_SECRET:}
+
+  # 휴대폰 본인확인(PASS). AUTH_SIGNUP_MODE=pass 일 때 쓴다.
+  identity:
+    # none(꺼짐) | fake(개발·시험용, 운영 금지)
+    provider: ${IDENTITY_PROVIDER:none}
+    # 연계정보(DI)를 해시할 때 섞는 서버 비밀값, 32자 이상. 한 번 정하면 바꾸지 않는다 (바꾸면 기존 가입자와 매칭이 끊긴다)
+    di-pepper: ${PASS_DI_PEPPER:}
+    # 가입할 수 있는 최소 만 나이 (개인정보 보호법: 만 14세 미만은 법정대리인 동의 필요)
+    min-age: ${IDENTITY_MIN_AGE:14}
 
 server:
   port: 8080
