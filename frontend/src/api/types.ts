@@ -124,10 +124,11 @@ export type RouteRequest = {
 }
 
 /**
- * signupEnabled: 회원가입을 쓸 수 있음 / emailRequired: 가입에 이메일 인증이 필요함(false 면 이메일 없이 바로 가입)
+ * signupEnabled: 회원가입을 쓸 수 있음 / collectEmail: 가입할 때 이메일을 받음
+ * verifyEmail: 이메일 인증 링크를 열어야 가입이 끝남(false 면 바로 가입·로그인)
  * recoveryEnabled: 메일로 아이디 찾기·비밀번호 재설정을 쓸 수 있음
  */
-export type AuthOptions = { signupEnabled: boolean; emailRequired: boolean; recoveryEnabled: boolean }
+export type AuthOptions = { signupEnabled: boolean; collectEmail: boolean; verifyEmail: boolean; recoveryEnabled: boolean }
 
 export type SignupRequest = {
   loginId: string

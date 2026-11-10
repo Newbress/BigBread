@@ -8,14 +8,16 @@ import PasswordInput from './PasswordInput.tsx'
 type Availability = { id: string; state: 'checking' | 'available' | 'taken' | 'error' } | null
 
 type Props = {
-  /** true 면 이메일을 받아 인증 메일을 보낸다. false 면 이메일 없이 바로 가입하고 로그인한다. */
-  emailRequired: boolean
+  /** 이메일 칸을 보여줄지 (false 면 이메일 없이 가입) */
+  collectEmail: boolean
+  /** true 면 인증 메일을 보내고, false 면 바로 가입하고 로그인한다 */
+  verifyEmail: boolean
   onLogin: (loginId: string, password: string) => Promise<void>
   onBack: () => void
   onDone: (email: string) => void
 }
 
-export default function SignupForm({ emailRequired, onLogin, onBack, onDone }: Props) {
+export default function SignupForm({ collectEmail, verifyEmail, onLogin, onBack, onDone }: Props) {
   const [loginId, setLoginId] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -32,7 +34,7 @@ export default function SignupForm({ emailRequired, onLogin, onBack, onDone }: P
   const idFormatError = loginId ? loginIdError(loginId) : null
   const errors = {
     loginId: touched.loginId ? (idFormatError ?? (loginId ? null : '아이디를 입력해 주세요.')) : null,
-    email: emailRequired && touched.email ? emailError(email) : null,
+    email: collectEmail && touched.email ? emailError(email) : null,
     password: touched.password ? passwordError(password, loginId) : null,
     confirm: touched.confirm && confirm !== password ? '비밀번호가 서로 달라요.' : null,
     nickname: touched.nickname ? nicknameError(nickname) : null,
@@ -66,7 +68,7 @@ export default function SignupForm({ emailRequired, onLogin, onBack, onDone }: P
 
   const clientValid =
     !loginIdError(loginId) &&
-    (!emailRequired || !emailError(email)) &&
+    (!collectEmail || !emailError(email)) &&
     !passwordError(password, loginId) &&
     confirm === password &&
     !nicknameError(nickname) &&
@@ -83,12 +85,12 @@ export default function SignupForm({ emailRequired, onLogin, onBack, onDone }: P
     try {
       await signup({
         loginId: normalizedId,
-        email: emailRequired ? email.trim() : '',
+        email: collectEmail ? email.trim() : '',
         password,
         nickname: nickname.trim(),
         agreedToTerms: agreed,
       })
-      if (emailRequired) {
+      if (verifyEmail) {
         onDone(email.trim())
       } else {
         await onLogin(normalizedId, password) // 가입 직후 바로 로그인한다 (창은 로그인 성공 시 닫힌다)
@@ -116,8 +118,12 @@ export default function SignupForm({ emailRequired, onLogin, onBack, onDone }: P
           />
         )}
       </FormField>
-      {emailRequired && (
-      <FormField label="이메일" hint="(인증과 아이디·비밀번호 찾기에 쓰여요)" error={errors.email}>
+      {collectEmail && (
+      <FormField
+        label="이메일"
+        hint={verifyEmail ? '(인증과 아이디·비밀번호 찾기에 쓰여요)' : '(아이디·비밀번호를 잊었을 때 찾는 데만 쓰여요. 정확히 입력해 주세요)'}
+ error={errors.email}
+      >
         {({ id, describedBy, invalid }) => (
           <input
             id={id}
@@ -185,16 +191,16 @@ export default function SignupForm({ emailRequired, onLogin, onBack, onDone }: P
           <summary>내용 보기</summary>
           <dl className="consent__table">
             <dt>수집 항목</dt>
-            <dd>{emailRequired ? '아이디, 이메일, 비밀번호(암호화해 저장), 닉네임' : '아이디, 비밀번호(암호화해 저장), 닉네임'}</dd>
+            <dd>{collectEmail ? '아이디, 이메일, 비밀번호(암호화해 저장), 닉네임' : '아이디, 비밀번호(암호화해 저장), 닉네임'}</dd>
             <dt>이용 목적</dt>
-            <dd>{emailRequired ? '회원 식별, 로그인, 이메일 인증, 아이디·비밀번호 찾기' : '회원 식별, 로그인'}</dd>
+            <dd>{collectEmail ? (verifyEmail ? '회원 식별, 로그인, 이메일 인증, 아이디·비밀번호 찾기' : '회원 식별, 로그인, 아이디·비밀번호 찾기') : '회원 식별, 로그인'}</dd>
             <dt>보유 기간</dt>
             <dd>회원 탈퇴 시까지</dd>
           </dl>
         </details>
       </div>
 
-      {!emailRequired && (
+      {!collectEmail && (
         <p className="login-dialog__note">
           이메일을 받지 않는 대신 비밀번호를 잊으면 스스로 찾을 수 없어요. 비밀번호는 꼭 기억해 두세요. 잊었다면 운영자에게 문의하면 임시 비밀번호를 받을 수 있어요.
         </p>
@@ -206,7 +212,7 @@ export default function SignupForm({ emailRequired, onLogin, onBack, onDone }: P
         </p>
       )}
       <button type="submit" className="btn btn--on btn--block" disabled={busy}>
-        {emailRequired ? (busy ? '인증 메일 보내는 중…' : '인증 메일 받기') : busy ? '가입하는 중…' : '가입하기'}
+        {verifyEmail ? (busy ? '인증 메일 보내는 중…' : '인증 메일 받기') : busy ? '가입하는 중…' : '가입하기'}
       </button>
       <div className="auth-form__links">
         <button type="button" className="link-btn" onClick={onBack}>

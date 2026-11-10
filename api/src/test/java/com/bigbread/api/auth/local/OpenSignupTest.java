@@ -49,7 +49,8 @@ class OpenSignupTest {
     void 가입은_열려_있고_이메일은_필요_없고_메일_복구는_없다() throws Exception {
         mvc.perform(get("/api/auth/options")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.signupEnabled").value(true))
-                .andExpect(jsonPath("$.emailRequired").value(false))
+                .andExpect(jsonPath("$.collectEmail").value(false))
+                .andExpect(jsonPath("$.verifyEmail").value(false))
                 .andExpect(jsonPath("$.recoveryEnabled").value(false));
     }
 

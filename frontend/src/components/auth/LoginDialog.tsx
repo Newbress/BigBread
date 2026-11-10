@@ -146,7 +146,8 @@ export default function LoginDialog({ providers, options, onLogin, onClose }: Pr
 
         {mode === 'signup' && (
           <SignupForm
-            emailRequired={options.emailRequired}
+            collectEmail={options.collectEmail}
+            verifyEmail={options.verifyEmail}
             onLogin={onLogin}
             onBack={backToLogin}
             onDone={(email) => {
