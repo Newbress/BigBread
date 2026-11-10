@@ -138,6 +138,10 @@ export default function LoginDialog({ providers, signupEnabled, onLogin, onClose
                   소셜 계정과 아이디 계정은 서로 별도 계정이에요. 같은 사람이라도 로그인 방법이 다르면 다른 계정으로
                   취급돼요.
                 </p>
+                <p className="login-dialog__note">
+                  소셜 로그인으로 시작하면 <a href="/terms" target="_blank" rel="noreferrer">이용약관</a>과{' '}
+                  <a href="/privacy" target="_blank" rel="noreferrer">개인정보 처리방침</a>에 동의한 것으로 봐요.
+                </p>
               </>
             )}
           </>

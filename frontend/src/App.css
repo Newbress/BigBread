@@ -1626,3 +1626,28 @@ a.btn.btn--block {
     color: #1c1612;
   }
 }
+
+/* 약관·개인정보 처리방침 */
+.auth-card--wide {
+  width: min(100%, 720px);
+  line-height: 1.65;
+}
+
+.legal__meta {
+  color: var(--muted, #78716c);
+  font-size: 0.85rem;
+}
+
+.legal__section h3 {
+  margin: 10px 0 4px;
+  font-size: 1rem;
+}
+
+.legal__section ul {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.consent .check a {
+  color: var(--accent-strong);
+}
